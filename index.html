@@ -208,12 +208,12 @@ input[type=checkbox]{accent-color:var(--accent)}
 .stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
 .device{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
 .app{display:grid;grid-template-columns:168px minmax(0,1fr);min-height:680px}
-.side{background:var(--navy);color:#fff;padding:16px 10px;display:flex;flex-direction:column;gap:4px}
-.side.adm{background:#3a2850}
-.side .sl{display:flex;gap:10px;align-items:center;padding:0 6px 14px;font-weight:800;font-size:13px}
-.side .ni{padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
-.side .ni.on{background:rgba(255,255,255,.14);color:#fff}
-.side .usr{margin-top:auto;display:flex;gap:8px;align-items:center;font-size:12px;padding:8px 6px;border-top:1px solid rgba(255,255,255,.18)}
+.appnav{background:var(--navy);color:#fff;padding:16px 10px;display:flex;flex-direction:column;gap:4px}
+.appnav.adm{background:#3a2850}
+.appnav .sl{display:flex;gap:10px;align-items:center;padding:0 6px 14px;font-weight:800;font-size:13px}
+.appnav .ni{padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
+.appnav .ni.on{background:rgba(255,255,255,.14);color:#fff}
+.appnav .usr{margin-top:auto;display:flex;gap:8px;align-items:center;font-size:12px;padding:8px 6px;border-top:1px solid rgba(255,255,255,.18)}
 .av{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
 .main{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
 .tbar{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -295,7 +295,7 @@ input[type=checkbox]{accent-color:var(--accent)}
 .big{min-height:50px;font-size:16px;padding-inline:22px}
 .link{font:inherit;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;min-height:40px;padding:0 6px}
 @media (max-width:1120px){.stage{grid-template-columns:1fr}.guide{position:static}}
-@media (max-width:760px){.app{grid-template-columns:1fr}.side{flex-direction:row;overflow-x:auto;align-items:center}.side .usr{display:none}.cols{grid-template-columns:1fr}.cp,.cl{grid-template-columns:1fr 1fr}.cp>:first-child,.cl>:first-child{grid-column:1/-1}.th{display:none}.side .ni{white-space:nowrap;flex:none}.side .sl{padding-bottom:0;flex:none}.screen{padding:14px}}
+@media (max-width:760px){.app{grid-template-columns:1fr}.appnav{flex-direction:row;overflow-x:auto;align-items:center}.appnav .usr{display:none}.cols{grid-template-columns:1fr}.cp,.cl{grid-template-columns:1fr 1fr}.cp>:first-child,.cl>:first-child{grid-column:1/-1}.th{display:none}.appnav .ni{white-space:nowrap;flex:none}.appnav .sl{padding-bottom:0;flex:none}.screen{padding:14px}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 
@@ -474,7 +474,7 @@ function sDamp(){
    <div class="diag">${svgDiagram()}
      <div class="legend">${BANDS.map(([k,l])=>`<span><i style="background:var(--b-${k})"></i>${l} (${cnt(k)})</span>`).join('')}</div>
      ${sel?`<div class="icbar"><span class="muted" style="align-self:center">Selected icon</span><button class="btn sm" data-act="ic" data-a="rl">Rotate left</button><button class="btn sm" data-act="ic" data-a="rr">Rotate right</button><button class="btn sm" data-act="ic" data-a="sm">Smaller</button><button class="btn sm" data-act="ic" data-a="lg">Larger</button><button class="btn sm" data-act="ic" data-a="rm">Remove</button></div>`:''}
-     <p class="muted" style="margin-top:8px;font-size:12px">${S.last||'Tap the drawing to choose a point, or pick an icon first and then tap where it goes.'}</p>
+     <p class="muted" style="margin-top:8px;font-size:12px">${S.last||'Step 1: tap the drawing where you took the reading. Step 2: type the number on the keypad. Step 3: press Next.'}</p>
    </div>
    <div class="side">
      <h3>Icon toolbox</h3>
@@ -735,7 +735,7 @@ function chrome(act,A,label){
     return `<div class="bwin"><div class="btop"><i></i><i></i><i></i><div class="url">mcsnetwork.co.uk/${path}</div></div><div class="site"><div class="shead"><span class="logo">MCS</span><span>Services</span><span>Engineers</span><span>Contact</span><span class="sp btn primary sm">Book a service</span></div><div class="screen" id="screen"></div></div></div>`;
   }
   const adm=act==='MCS admin';
-  return `<div class="app"><aside class="side ${adm?'adm':''}"><div class="sl"><span class="logo">MCS</span>${adm?'Admin':'Network'}</div>${(adm?navA:navE).map(n=>`<div class="ni ${n===(adm?onA:onE)?'on':''}">${n}</div>`).join('')}<div class="usr"><span class="av">${init}</span>${adm?'MCS Network':eng}</div></aside><div class="main"><div class="tbar"><span class="crumb">${adm?'Admin':'My Jobs'} / ${label}</span><span class="row" id="tstat" style="gap:8px"></span></div><div class="screen" id="screen"></div></div></div>`;
+  return `<div class="app"><aside class="appnav ${adm?'adm':''}"><div class="sl"><span class="logo">MCS</span>${adm?'Admin':'Network'}</div>${(adm?navA:navE).map(n=>`<div class="ni ${n===(adm?onA:onE)?'on':''}">${n}</div>`).join('')}<div class="usr"><span class="av">${init}</span>${adm?'MCS Network':eng}</div></aside><div class="main"><div class="tbar"><span class="crumb">${adm?'Admin':'My Jobs'} / ${label}</span><span class="row" id="tstat" style="gap:8px"></span></div><div class="screen" id="screen"></div></div></div>`;
 }
 function homeHtml(){
   const li=a=>a.map(x=>'<li>'+x+'</li>').join('');

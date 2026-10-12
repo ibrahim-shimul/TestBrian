@@ -1,0 +1,920 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MCS Inspection and Repair Quote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: step rail on the left, a clickable iPad screen in the centre, and a notes panel on the right that keeps what Brian said apart from what we propose and what is still open. */
+:root{
+  --bg:#f2f3ef; --surface:#ffffff; --surface2:#f6f7f3; --line:#d8dbd3;
+  --fg:#1c2220; --muted:#5b645f; --accent:#1c7d2e; --accent-fg:#ffffff; --navy:#1b2a4a;
+  --warn-bg:#fff3d1; --warn-line:#d9b13f; --warn-fg:#654700;
+  --said-bg:#dff0e2; --said-fg:#15511f; --ours-bg:#e4e9f6; --ours-fg:#233a73;
+  --bad-bg:#f8d9d5; --ok-bg:#dff0e2;
+  --b-green:#7cc58b; --b-amber:#f2cf5b; --b-orange:#f0a04b; --b-red:#e3685f; --on-band:#1c2220;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111512; --surface:#1a201c; --surface2:#212823; --line:#364038;
+    --fg:#e8ece8; --muted:#9ba69e; --accent:#4fbf66; --accent-fg:#0c180f; --navy:#223760;
+    --warn-bg:#3a3012; --warn-line:#8a6d1c; --warn-fg:#f0d58a;
+    --said-bg:#1d3a24; --said-fg:#a9e0b4; --ours-bg:#222c4a; --ours-fg:#b4c4f0;
+    --bad-bg:#4a2420; --ok-bg:#1d3a24; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111512; --surface:#1a201c; --surface2:#212823; --line:#364038;
+  --fg:#e8ece8; --muted:#9ba69e; --accent:#4fbf66; --accent-fg:#0c180f; --navy:#223760;
+  --warn-bg:#3a3012; --warn-line:#8a6d1c; --warn-fg:#f0d58a;
+  --said-bg:#1d3a24; --said-fg:#a9e0b4; --ours-bg:#222c4a; --ours-fg:#b4c4f0;
+  --bad-bg:#4a2420; --ok-bg:#1d3a24; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px}
+.wrap{max-width:1340px;margin:0 auto;padding-block:20px 48px}
+h1{font-size:26px;font-weight:800;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;font-weight:800;margin:0;text-wrap:balance}
+h3{font-size:12px;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p{margin:0 0 8px}
+.muted{color:var(--muted)}
+.top{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.top p{max-width:62ch;color:var(--muted);margin-top:4px}
+.ctrls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-weight:600;border:0;background:transparent;color:var(--fg);padding:9px 14px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.key{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.tag.said{background:var(--said-bg);color:var(--said-fg)}
+.tag.ours{background:var(--ours-bg);color:var(--ours-fg)}
+.tag.ask{background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-line)}
+.layout{display:grid;grid-template-columns:190px minmax(0,1fr) 310px;gap:20px;align-items:start}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.rail button{font:inherit;width:100%;text-align:left;display:flex;gap:10px;align-items:center;border:1px solid transparent;background:transparent;color:var(--muted);padding:8px 10px;border-radius:8px;cursor:pointer;min-height:40px}
+.rail .n{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700}
+.rail .on{background:var(--surface);border-color:var(--line);color:var(--fg);font-weight:700}
+.rail .on .n{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.rail .vis .n{border-color:var(--accent);color:var(--accent)}
+.rail .cv{font-size:11px;color:var(--warn-fg);background:var(--warn-bg);border-radius:4px;padding:0 6px}
+.device{background:var(--surface);border:2px solid var(--fg);border-radius:22px;overflow:hidden;min-width:0}
+.dbar{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--navy);color:#fff;flex-wrap:wrap}
+.dbar b{font-weight:800;letter-spacing:.02em}
+.dbar .btn{min-height:34px;padding:4px 12px;font-size:13px;background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.screen{padding:16px;height:600px;overflow:auto}
+.dfoot{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface2)}
+.btn{font:inherit;font-weight:700;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 16px;cursor:pointer;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.sm{min-height:36px;padding:5px 12px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-block:12px}
+.row{display:flex;gap:10px;align-items:center}
+.between{justify-content:space-between;flex-wrap:wrap}
+.crumb{color:var(--muted);font-size:12px;margin-bottom:6px}
+.badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+.badge.acc{background:var(--warn-bg);color:var(--warn-fg)}
+.badge.prog{background:var(--ours-bg);color:var(--ours-fg)}
+.badge.done{background:var(--said-bg);color:var(--said-fg)}
+.parts{margin:8px 0 14px;padding-left:18px;color:var(--muted)}
+.fld{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:13px}
+.fld input,.fld textarea,.fld select{font:inherit;font-weight:500;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+.fld input[readonly]{background:var(--surface2);color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.dampgrid{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px}
+.diag{flex:1 1 380px;min-width:0}
+.side{flex:0 1 230px;min-width:210px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{font:inherit;font-weight:600;font-size:13px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 10px;min-height:38px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.tabs i{font-style:normal;font-weight:500;opacity:.7;margin-left:4px}
+svg.diagram{width:100%;height:auto;display:block;background:var(--surface2);border:1.5px dashed var(--line);border-radius:10px;touch-action:manipulation;cursor:crosshair}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:3px;border:1px solid var(--fg)}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tools button{font:inherit;font-size:10.5px;font-weight:600;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-height:56px}
+.tools button[aria-pressed="true"]{border-color:var(--accent);background:var(--said-bg)}
+.tools svg{width:100%;height:34px}
+.readout{border:1.5px solid var(--line);border-radius:8px;min-height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;font-weight:800;font-size:24px;font-variant-numeric:tabular-nums;color:var(--on-band)}
+.readout small{font-size:11px;font-weight:600;color:var(--muted)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.pad button{font:inherit;font-size:18px;font-weight:700;min-height:46px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;cursor:pointer}
+.pad .go{background:var(--fg);color:var(--surface);border-color:var(--fg);font-size:14px}
+.icbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.secs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.secs button{font:inherit;font-weight:600;font-size:13px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 10px;min-height:38px;cursor:pointer}
+.secs button[aria-pressed="true"]{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.secs i{font-style:normal;font-weight:500;opacity:.7;margin-left:4px}
+.line{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.line .lbl{flex:1 1 220px;min-width:0;font-weight:600}
+.pf{display:inline-flex;gap:6px}
+.pf button{font:inherit;font-weight:700;min-width:50px;min-height:44px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;cursor:pointer}
+.pf button[aria-pressed="true"].P{background:var(--b-green);border-color:var(--fg);color:var(--on-band)}
+.pf button[aria-pressed="true"].F{background:var(--b-red);border-color:var(--fg);color:var(--on-band)}
+.pf button[aria-pressed="true"].N{background:var(--line);border-color:var(--fg)}
+.pf button[aria-pressed="true"].R{background:var(--b-amber);border-color:var(--fg);color:var(--on-band)}
+.extra{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px}
+.extra .fld{flex:1 1 240px}
+.tyre{display:grid;grid-template-columns:110px repeat(5,minmax(60px,1fr));gap:6px;align-items:center;overflow-x:auto;min-width:0}
+.tyre input{font:inherit;min-height:40px;width:100%;border:1.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);padding:4px 8px;min-width:0}
+.tyre b{font-size:12px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 16px}
+.checks label{display:flex;gap:10px;align-items:center;min-height:40px;font-weight:500}
+.checks input{width:20px;height:20px;accent-color:var(--accent)}
+.block{margin-top:16px}
+.sigpad{width:100%;height:140px;border:1.5px dashed var(--line);border-radius:8px;background:var(--surface2);touch-action:none;display:block}
+.sumrow{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.sumrow div{border:1px solid var(--line);border-radius:8px;padding:8px 14px;min-width:120px}
+.sumrow b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.notes{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px}
+.notes h2{font-size:16px}
+.nitem{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.nitem p{margin:0}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;z-index:9;max-width:90vw}
+@media (max-width:1120px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .rail ol{flex-direction:row;overflow-x:auto;padding-bottom:6px}
+  .rail button{white-space:nowrap;width:auto}
+  .notes{position:static}
+}
+.dbar[data-actor="Customer"]{background:#2a5a47}
+.dbar[data-actor="MCS admin"]{background:#4a2f5e}
+.rules{margin-bottom:16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 14px}
+.rules summary{cursor:pointer;font-weight:700}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px}
+.rgrid label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:13px}
+.rgrid input,.rgrid select{font:inherit;min-height:40px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.rgrid .ck{flex-direction:row;align-items:center;gap:8px;min-height:40px}
+.rgrid .ck input{min-height:0;width:18px;height:18px}
+.lnrow{display:grid;grid-template-columns:minmax(120px,1fr) 110px auto auto;gap:8px;align-items:end;margin-bottom:8px}
+.lnrow label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--muted)}
+.lnrow input,.inp{font:inherit;min-height:42px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);min-width:0;width:100%}
+.mt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.mt td{padding:5px 0;border-bottom:1px solid var(--line)}
+.mt td:last-child{text-align:right;font-weight:600}
+.mt tr.tot td{font-weight:800;font-size:16px;border-bottom:2px solid var(--fg)}
+.mt tr.sub td{color:var(--muted);font-size:12.5px}
+.banner{border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:600;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-line)}
+.banner.ok{background:var(--said-bg);color:var(--said-fg);border-color:var(--said-fg)}
+.banner.bad{background:var(--bad-bg);color:var(--fg);border-color:var(--b-red)}
+.hint{flex:1;text-align:center;color:var(--muted);font-size:12.5px;align-self:center}
+.logl{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px}
+.doc{border:1.5px solid var(--fg);border-radius:6px;padding:14px;background:var(--surface)}
+@media (max-width:640px){.lnrow{grid-template-columns:1fr 1fr}}
+/* ---- walkthrough shell v2 ---- */
+[hidden]{display:none!important}
+.home{max-width:920px;margin:8px auto 0}
+.home h2{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:0 0 12px;max-width:20ch}
+.home .lede{font-size:17px;max-width:62ch;color:var(--fg);margin-bottom:18px}
+.home .startrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:34px}
+.hsec{display:grid;grid-template-columns:200px minmax(0,1fr);gap:8px 32px;padding:22px 0;border-top:1px solid var(--line)}
+.hsec>h3{font-size:14px;text-transform:none;letter-spacing:0;color:var(--fg);font-weight:800;margin:0}
+.hsec ul,.hsec ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.hsec .who{display:grid;grid-template-columns:130px minmax(0,1fr);gap:4px 16px;margin:0}
+.hsec .who dt{font-weight:700}.hsec .who dd{margin:0;color:var(--muted)}
+.hsec .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px 32px}
+.hsec h4{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.hsec .open li{color:var(--warn-fg)}
+@media (max-width:760px){.hsec{grid-template-columns:1fr}.hsec .who{grid-template-columns:1fr}}
+.stage.noguide{grid-template-columns:minmax(0,1fr)}
+.stage.noguide .guide{display:none}
+::selection{background:var(--accent);color:var(--accent-fg)}
+*{scrollbar-color:var(--line) transparent}
+.pre:focus-within,.inp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pre input:focus-visible{outline:0}
+input[type=checkbox]{accent-color:var(--accent)}
+.wrap{max-width:1380px}
+.hdr{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{display:inline-grid;place-items:center;background:var(--accent);color:var(--accent-fg);font-weight:800;letter-spacing:.04em;border-radius:8px;width:38px;height:38px;font-size:13px;flex:none}
+.brand h1{font-size:20px}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.hctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn.ghost{background:transparent}
+.rules{margin:0 0 14px;padding:14px 16px}
+.rules h2{font-size:15px;margin-bottom:2px}
+.rules>p{color:var(--muted);margin:0 0 4px;font-size:13px}
+.journey{display:flex;gap:0;overflow-x:auto;padding:4px 2px 12px;margin-bottom:6px;scrollbar-width:thin}
+.jp{font:inherit;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:8px 14px 8px 12px;border-radius:10px;cursor:pointer;min-height:48px;margin-right:6px;position:relative}
+.jp .jl{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px}
+.jp{min-height:40px}
+.jp .dot{width:9px;height:9px;border-radius:50%;background:var(--navy);flex:none}
+.jp .dot.Customer{background:#2a8a62}.jp .dot.Engineer{background:#2f4f9c}.jp .dot.MCS-admin{background:#7b4aa0}
+.jp.on{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.jp.on small{color:inherit;opacity:.75}
+.jp.vis:not(.on){border-color:var(--accent)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.device{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.app{display:grid;grid-template-columns:168px minmax(0,1fr);min-height:680px}
+.side{background:var(--navy);color:#fff;padding:16px 10px;display:flex;flex-direction:column;gap:4px}
+.side.adm{background:#3a2850}
+.side .sl{display:flex;gap:10px;align-items:center;padding:0 6px 14px;font-weight:800;font-size:13px}
+.side .ni{padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
+.side .ni.on{background:rgba(255,255,255,.14);color:#fff}
+.side .usr{margin-top:auto;display:flex;gap:8px;align-items:center;font-size:12px;padding:8px 6px;border-top:1px solid rgba(255,255,255,.18)}
+.av{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.main{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tbar{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tbar .crumb{margin:0;font-size:13px}
+.tbar .btn{min-height:34px;padding:4px 12px;font-size:13px}
+.screen{padding:20px;height:auto;max-height:640px;overflow:auto;flex:1}
+.bwin{display:flex;flex-direction:column;min-height:680px}
+.btop{display:flex;gap:7px;align-items:center;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--line)}
+.btop i{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.btop .url{margin-left:10px;flex:1;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 14px;font-size:12.5px;color:var(--muted)}
+.site{display:flex;flex-direction:column;flex:1;background:var(--bg);min-width:0}
+.shead{display:flex;gap:22px;align-items:center;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--line);font-weight:600;font-size:14px}
+.shead .sp{margin-left:auto}
+.site .screen{max-width:760px;margin-inline:auto;width:100%}
+.demobar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap}
+.demobar .dmid{flex:1;text-align:center;font-size:13px;color:var(--muted);min-width:160px}
+.demobar .dmid b{display:block;color:var(--fg)}
+.guide{position:sticky;top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.guide h2{font-size:17px}
+.gmore summary{cursor:pointer;font-weight:700;font-size:13px;margin-bottom:8px}.gmore .gi{margin-bottom:8px}.gstep{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gwho{display:inline-flex;align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line)}
+.gdid{margin:0;font-size:14px}
+.gi{border-radius:10px;padding:10px 12px;font-size:13px}
+.gi b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.gi p{margin:0}
+.gi.ok{background:var(--said-bg);color:var(--said-fg)}
+.gi.info{background:var(--ours-bg);color:var(--ours-fg)}
+.gi.warn{background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-line)}
+.pgh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.pgh h2{font-size:22px}
+.pgh p{margin:2px 0 0;color:var(--muted)}
+.pill{font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.pill.grey{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.pill.blue{background:var(--ours-bg);color:var(--ours-fg)}
+.pill.amber{background:var(--warn-bg);color:var(--warn-fg)}
+.pill.green{background:var(--said-bg);color:var(--said-fg)}
+.pill.red{background:var(--bad-bg);color:var(--fg)}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,1fr);gap:16px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.panel>h3{text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg);margin:0 0 4px;font-weight:800}
+.panel .sub{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.panel.sticky{position:sticky;top:0}
+.th,.tr{display:grid;gap:8px;align-items:center}
+.th{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-bottom:4px}
+.tr{margin-bottom:8px}
+.cp{grid-template-columns:minmax(0,1fr) 120px 112px 34px}
+.cl{grid-template-columns:minmax(0,1fr) 84px 84px 34px}
+.pre{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);padding-left:10px}
+.pre input{border:0;outline:0;background:transparent;color:var(--fg);font:inherit;min-height:40px;width:100%;padding:0 8px 0 4px;min-width:0}
+.x{font:inherit;width:34px;height:34px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.empty{border:1.5px dashed var(--line);border-radius:8px;padding:12px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:8px}
+.earn{background:var(--said-bg);color:var(--said-fg);border-radius:12px;padding:14px;margin-bottom:14px}
+.earn span{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.earn b{display:block;font-size:28px;font-variant-numeric:tabular-nums}
+.earn small{font-size:12.5px}
+.opt{font:inherit;text-align:left;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:12px;cursor:pointer;flex:1;min-width:180px}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.opt b{display:block}.opt span{font-size:12.5px;color:var(--muted)}
+.days{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-top:10px}
+.day{font:inherit;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px;text-align:center;cursor:pointer;min-height:70px}
+.day small{display:block;color:var(--muted);font-size:11.5px}
+.day[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.day[disabled]{opacity:.45;cursor:not-allowed}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:20px;text-align:center;background:var(--surface2)}
+.drop.has{border-style:solid;border-color:var(--accent);background:var(--said-bg)}
+.video{aspect-ratio:16/9;background:#1a1f1c;border-radius:10px;display:grid;place-items:center}
+.video i{width:0;height:0;border-left:24px solid #fff;border-top:15px solid transparent;border-bottom:15px solid transparent;margin-left:6px}
+.chk{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.chk i{font-style:normal;font-weight:800;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex:none}
+.chk i.y{background:var(--said-bg);color:var(--said-fg)}.chk i.n{background:var(--bad-bg);color:var(--fg)}
+.bar{display:flex;height:26px;border-radius:8px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(--c)}
+.paper{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px;box-shadow:0 2px 10px rgba(20,30,25,.08)}
+.paper .ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--fg)}
+.paper .ph b{font-size:17px}
+.cta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.big{min-height:50px;font-size:16px;padding-inline:22px}
+.link{font:inherit;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;min-height:40px;padding:0 6px}
+@media (max-width:1120px){.stage{grid-template-columns:1fr}.guide{position:static}}
+@media (max-width:760px){.app{grid-template-columns:1fr}.side{flex-direction:row;overflow-x:auto;align-items:center}.side .usr{display:none}.cols{grid-template-columns:1fr}.cp,.cl{grid-template-columns:1fr 1fr}.cp>:first-child,.cl>:first-child{grid-column:1/-1}.th{display:none}.side .ni{white-space:nowrap;flex:none}.side .sl{padding-bottom:0;flex:none}.screen{padding:14px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="hdr">
+    <div class="brand"><span class="logo">MCS</span><div><h1>MCS Network: job walkthrough</h1><p>One job, seen by each person. Demo data, nothing is saved.</p></div></div>
+    <div class="hctl" id="hctl">
+      <div class="seg" role="group" aria-label="Part of the system"><button data-act="mode" data-a="insp" id="mi" aria-pressed="true">1. Inspection</button><button data-act="mode" data-a="rep" id="mr" aria-pressed="false">2. Repair quote</button></div>
+      <div class="seg" id="vseg" role="group" aria-label="Vehicle type"><button id="vm" aria-pressed="true">Motorhome</button><button id="vc" aria-pressed="false">Caravan</button></div>
+      <button class="btn" id="rbtn" aria-expanded="false">Try different answers</button><button class="btn" data-act="notes" id="nbtn" aria-pressed="false">Show notes</button><button class="btn ghost" data-act="home">Overview</button>
+    </div>
+  </header>
+  <main id="home" class="home"></main>
+  <div id="flow" hidden>
+  <section class="panel rules" id="rulesbox" hidden aria-label="Try different answers"><h2>Try different answers</h2><p>Brian has not decided these yet. Change one and the money in the repair quote updates.</p><div class="rgrid" id="rules"></div></section>
+  <nav class="journey" id="journey" aria-label="Steps in this part"></nav>
+  <div class="stage">
+    <section aria-label="Screen preview">
+      <div class="device" id="device"></div>
+      <div class="demobar" id="foot"></div>
+    </section>
+    <aside class="guide" id="notes" aria-live="polite"></aside>
+  </div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const VIEWS=['front','rear','nearside','offside','ceiling','floor'];
+const SECTIONS=[
+ {id:'under',name:'Underbody',lines:['Corner steadies (where applicable)','Folding steps (where applicable)','Under-slung tanks and pipes']},
+ {id:'elec',name:'Electrical system',lines:['230V and 12V fridge operation','Leisure battery (if fitted)','Interior lighting and equipment','Check fuse box and rating','Earth bonding continuity test','230V sockets']},
+ {id:'gas',name:'LPG gas systems',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Check security of LPG tank (if fitted)','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear','Appliances: check operation including FFDs']},
+ {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet']},
+ {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Floor','Furniture','Blinds and fly screens']},
+ {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights','Damp test: note reading on the damp survey']},
+ {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm','Press test button on CO alarm (if fitted)','Fire extinguisher fitted: check security of its housing']}
+];
+const TOOLS=[['window','Window'],['windowsq','Window sq.'],['ac','AC unit'],['acsq','AC sq.'],['fan','Fan'],['toilet','Toilet'],['shower','Shower'],['notest','No test']];
+const HAND=['Gas turned off','Lights turned off','Roof lights latched','Water pump turned off','Windows locked','12V/main power switch turned off','All cupboards closed/latched','Old parts left in vehicle (if suitable)','Exterior lockers locked','Service book stamped','Exterior door locked','Protective coverings removed'];
+const VEH={motorhome:{name:'Swift Bolero 684',type:'Motorhome',form:'Motorhome habitation check'},caravan:{name:'Bailey Pegasus Grande',type:'Touring caravan',form:'Tourer annual service report'}};
+const BANDS=[['green','0 to 15%'],['amber','15 to 20%'],['orange','20 to 30%'],['red','30% and over']];
+
+const NOTES={
+ job:{t:'Job details',did:'The engineer opens an accepted job and starts the inspection. The job moves to In Progress.',i:[
+  ['said','Engineers use the platform on an iPad to go through each customer job.'],
+  ['ours','The form is picked from the vehicle type on the booking, so the engineer never chooses a template.'],
+  ['ask','Which services use this form: Habitation Checks and caravan servicing only, or also Gas, Electrical and Water and Damp?']]},
+ details:{t:'Vehicle details',did:'Customer and vehicle come from the booking. The engineer adds the VIN and mileage.',i:[
+  ['said','The paper form header holds customer name, make and model, VIN and vehicle mileage.'],
+  ['ours','Prefilled from the booking so the engineer types only what is new.'],
+  ['ask','The caravan page we have shows no mileage. Does the caravan form need it?']]},
+ damp:{t:'Damp survey',did:'Pick a view, tap a point on the vehicle, type the reading, press Next. Place icons to show windows, fan, AC, toilet and shower.',i:[
+  ['said','Icons (window, fan, AC, toilet, shower, No test) that rotate; tap any point and enter 0 to 99; readings every 300mm so quick entry matters; colour bands.'],
+  ['ours','The keypad stays open and Next saves and waits for the next tap. Icons rotate and resize. In the real design icons are dragged; this demo is tap to place.'],
+  ['ask','Whole numbers or decimals? Which band do 15, 20 and 30 fall in? What does the engineer record after No test? The caravan drawings have not arrived, so the motorhome ones are reused.']]},
+ check:{t:'Checklist',did:'One section per screen with large P, F, N/A and R buttons. Marking F opens a note and photo.',i:[
+  ['said','Every line is marked P, F, N/A or R, in the sections on the paper form.'],
+  ['ours','Progress per section, and a Pass all unmarked shortcut. Line wording here is sample text read from photos.'],
+  ['ask','What does R stand for? Exact wording needs a clear scan. Are the items fixed, or can admin edit them?']]},
+ tyres:{t:'Wheels and tyres',did:'Caravan only. Wheel bolt torque with signature and double check, then tyre age, pressure and tread for each wheel.',i:[
+  ['said','The caravan page has a wheel bolt torque block and a tyre table with a note to replace tyres over 5 years old.'],
+  ['ours','Shown as its own step, only when the vehicle is a caravan.'],
+  ['ask','We read the columns as nearside and offside, front and rear, plus spare. Is that right?']]},
+ final:{t:'Finalisation',did:'Safety expiry dates, test results, hand-over checks, EICR and observations, on one screen in four parts.',i:[
+  ['said','All of these are on the paper form, including a Repaired column for observations.'],
+  ['ours','Grouped into four parts so the engineer scrolls once, not across several pages.'],
+  ['ask','How are the RCD and continuity cells filled in? Does the engineer fix problems on the spot (the Repaired tick) or only report them?']]},
+ proof:{t:'Job proof',did:'The engineer uploads a video of the job, and photos if useful. MCS watches the video before signing the job off.',i:[
+  ['said','Brian wants the video, or photos, uploaded into our platform, not through an outside video system. The video is the proof of the job.'],
+  ['ours','One video area and a photo area on one screen, with an upload tick once the file is in.'],
+  ['ask','Is the video required, or can photos be used instead? Any limit on video length or size?']]},
+ sign:{t:'Sign-off',did:'The engineer signs, then the customer signs on the device at the job. MCS adds the third signature later, after reviewing the video and documents.',i:[
+  ['said','Three signatures: engineer, customer at the job, then a senior MCS engineer after checking the job. Engineers cannot sign a job off themselves.'],
+  ['ours','The report prints all signatures on every page. The MCS signature is added from the admin side, which is not designed.'],
+  ['ask','Can a half-finished form be saved and resumed? Can the engineer change a report after submitting?']]},
+ done:{t:'Submitted',did:'The report is submitted and the job shows Awaiting MCS check.',i:[
+  ['said','MCS checks the video and documents, signs, then the job completes and the signed report is emailed to the customer automatically. The engineer then requests payment with an invoice, and MCS pays by bank transfer.'],
+  ['ours','The next steps are shown on this screen so the engineer knows what happens next.'],
+  ['ask','If MCS finds a problem with the job, does it go back to the engineer? Is there a minimum amount for a payment request?']]}
+};
+
+let uid=1;
+function fresh(vehicle){
+  const s={vehicle,step:'job',vis:{job:true},f:{},view:'nearside',tool:null,pending:null,selIcon:null,last:'',sec:0,chk:{},photo:{},tick:{},eicr:'',sig:{},proof:{video:false,photos:0},approved:false,backNote:'',data:{}};
+  VIEWS.forEach(v=>s.data[v]={pins:[],icons:[]});
+  return s;
+}
+let S=fresh('motorhome');
+
+const steps=()=>[['job','Job details'],['details','Vehicle details'],['damp','Damp survey'],['check','Checklist'],...(S.vehicle==='caravan'?[['tyres','Wheels and tyres']]:[]),['final','Finalisation'],['proof','Job proof'],['sign','Sign-off'],['done','Submitted'],['review','MCS check']];
+const veh=()=>VEH[S.vehicle];
+const band=v=>v>=30?'red':v>20?'orange':v>15?'amber':'green';
+const fv=n=>esc(S.f[n]??'');
+const inp=(n,label,ph='',type='text',ro='')=>`<label class="fld"><span>${label}</span><input data-f="${n}" type="${type}" value="${fv(n)}" placeholder="${esc(ph)}" ${ro}></label>`;
+
+function iconShape(t){
+  const st='fill="var(--surface)" stroke="var(--fg)" stroke-width="1.8"';
+  const tx='fill="var(--fg)" font-family="Manrope,sans-serif" font-weight="800" text-anchor="middle"';
+  switch(t){
+    case 'window':return `<rect x="-24" y="-15" width="48" height="30" ${st}/>`;
+    case 'windowsq':return `<rect x="-17" y="-17" width="34" height="34" ${st}/>`;
+    case 'ac':return `<rect x="-24" y="-14" width="48" height="28" ${st}/><text y="5" font-size="13" ${tx}>AC</text>`;
+    case 'acsq':return `<rect x="-17" y="-17" width="34" height="34" ${st}/><text y="5" font-size="13" ${tx}>AC</text>`;
+    case 'fan':return `<circle r="15" ${st}/><path d="M0-15V15M-15 0H15M-10-10L10 10M10-10L-10 10" stroke="var(--fg)" stroke-width="1.4" fill="none"/>`;
+    case 'toilet':return `<rect x="-16" y="-16" width="32" height="32" ${st}/><text y="6" font-size="17" ${tx}>T</text>`;
+    case 'shower':return `<rect x="-16" y="-16" width="32" height="32" ${st}/><path d="M-9-8H9M-7-1V5M0-1V8M7-1V5" stroke="var(--fg)" stroke-width="1.8" fill="none"/>`;
+    default:return `<rect x="-24" y="-15" width="48" height="30" fill="var(--surface2)" stroke="var(--fg)" stroke-width="1.8" stroke-dasharray="4 3"/><text y="4" font-size="10" ${tx}>No test</text>`;
+  }
+}
+function outline(){
+  const o='fill="var(--surface)" stroke="var(--fg)" stroke-width="2.2"';
+  const c=S.vehicle==='caravan', v=S.view;
+  if(v==='nearside'||v==='offside'){
+    const left=v==='offside';
+    if(c){
+      const hitch=left?'<path d="M60 185H12" stroke="var(--fg)" stroke-width="2.5"/>':'<path d="M460 185H508" stroke="var(--fg)" stroke-width="2.5"/>';
+      return `<rect x="60" y="55" width="400" height="150" rx="22" ${o}/>${hitch}<circle cx="260" cy="212" r="24" ${o}/>`;
+    }
+    return left
+     ?`<rect x="150" y="55" width="330" height="150" rx="14" ${o}/><path d="M150 100H80Q52 100 44 130L36 205H150Z" ${o}/><circle cx="100" cy="210" r="24" ${o}/><circle cx="400" cy="210" r="24" ${o}/>`
+     :`<rect x="40" y="55" width="330" height="150" rx="14" ${o}/><path d="M370 100H440Q468 100 476 130L484 205H370Z" ${o}/><circle cx="120" cy="210" r="24" ${o}/><circle cx="420" cy="210" r="24" ${o}/>`;
+  }
+  if(v==='front')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="176" y="58" width="168" height="72" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>`;
+  if(v==='rear')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="190" y="68" width="140" height="120" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>`;
+  return `<rect x="60" y="45" width="400" height="190" rx="12" ${o}/>`;
+}
+function svgDiagram(){
+  const d=S.data[S.view];
+  let g=outline();
+  g+=`<text x="16" y="24" font-size="12" font-weight="700" fill="var(--muted)" font-family="Manrope,sans-serif">${S.view.toUpperCase()}${S.vehicle==='caravan'?' (motorhome style drawing)':''}</text>`;
+  d.icons.forEach(i=>{
+    const sel=S.selIcon===i.id;
+    g+=`<g data-ic="${i.id}" transform="translate(${i.x} ${i.y}) rotate(${i.rot}) scale(${i.s})" style="cursor:pointer">${iconShape(i.type)}${sel?'<rect x="-30" y="-22" width="60" height="44" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/>':''}</g>`;
+  });
+  d.pins.forEach((p,k)=>{
+    g+=`<g data-pin="${k}" style="cursor:pointer"><circle cx="${p.x}" cy="${p.y}" r="13" fill="var(--b-${band(p.v)})" stroke="var(--fg)" stroke-width="1.6"/><text x="${p.x}" y="${p.y+4.5}" text-anchor="middle" font-size="12" font-weight="800" fill="var(--on-band)" font-family="Manrope,sans-serif">${p.v}</text></g>`;
+  });
+  if(S.pending)g+=`<circle cx="${S.pending.x}" cy="${S.pending.y}" r="17" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="4 3"/>`;
+  return `<svg class="diagram" viewBox="0 0 520 260" role="img" aria-label="${S.view} view. Tap to place a reading or an icon.">${g}</svg>`;
+}
+
+function sJob(){
+  const parts=['Vehicle details','Damp survey on six vehicle views','Checklist in seven sections',...(S.vehicle==='caravan'?['Wheels and tyres']:[]),'Finalisation and test results','Job proof: video or photos','Sign-off'];
+  return `<div class="row between"><h2>Habitation Check: ${veh().name}</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Customer</h3><p><b>Sarah Johnson</b><br>12 Ash Grove, Bradford</p><p class="muted">Wed 27 Aug, 10:00</p></div>
+    <div class="card"><h3>Vehicle</h3><p><b>${veh().name}</b><br>${veh().type}</p><p class="muted">From the booking</p></div>
+  </div>
+  <div class="card"><h3>Inspection form</h3><p>Picked from the booking: <b>${veh().form}</b></p><ul class="parts">${parts.map(p=>`<li>${p}</li>`).join('')}</ul>
+  <button class="btn primary" data-act="go" data-a="details">Start inspection</button></div>`;
+}
+function sDetails(){
+  return `<h2>Vehicle details</h2><p class="muted">Customer and vehicle are filled in from the booking.</p>
+  <div class="fields block">
+    <label class="fld"><span>Customer name</span><input value="Sarah Johnson" readonly></label>
+    <label class="fld"><span>Make and model</span><input value="${veh().name}" readonly></label>
+    ${inp('vin','VIN number','17 characters')}
+    ${S.vehicle==='motorhome'?inp('miles','Vehicle mileage','e.g. 48200','number'):''}
+    ${inp('jobref','Job reference / date','MCS-20487 / 27 Aug')}
+  </div>`;
+}
+function sDamp(){
+  const d=S.data[S.view];
+  const sel=d.icons.find(i=>i.id===S.selIcon);
+  const all=VIEWS.flatMap(v=>S.data[v].pins);
+  const cnt=k=>all.filter(p=>band(p.v)===k).length;
+  const pv=S.pending?S.pending.val:'';
+  const b=pv!==''?band(+pv):null;
+  return `<div class="tabs" role="group" aria-label="Vehicle view">${VIEWS.map(v=>`<button data-act="view" data-a="${v}" aria-pressed="${S.view===v}">${v[0].toUpperCase()+v.slice(1)}<i>${S.data[v].pins.length||''}</i></button>`).join('')}</div>
+  <details class="block" style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Meter details (calibration, weather, temperature, make and model)</summary>
+   <div class="fields" style="margin-top:8px">${inp('cal','Calibration check figure','')}${inp('wx','Weather conditions','')}${inp('amb','Ambient temperature','')}${inp('meter','Damp meter make and model','')}</div></details>
+  <div class="dampgrid">
+   <div class="diag">${svgDiagram()}
+     <div class="legend">${BANDS.map(([k,l])=>`<span><i style="background:var(--b-${k})"></i>${l} (${cnt(k)})</span>`).join('')}</div>
+     ${sel?`<div class="icbar"><span class="muted" style="align-self:center">Selected icon</span><button class="btn sm" data-act="ic" data-a="rl">Rotate left</button><button class="btn sm" data-act="ic" data-a="rr">Rotate right</button><button class="btn sm" data-act="ic" data-a="sm">Smaller</button><button class="btn sm" data-act="ic" data-a="lg">Larger</button><button class="btn sm" data-act="ic" data-a="rm">Remove</button></div>`:''}
+     <p class="muted" style="margin-top:8px;font-size:12px">${S.last||'Tap the drawing to choose a point, or pick an icon first and then tap where it goes.'}</p>
+   </div>
+   <div class="side">
+     <h3>Icon toolbox</h3>
+     <div class="tools">${TOOLS.map(([k,l])=>`<button data-act="tool" data-a="${k}" aria-pressed="${S.tool===k}"><svg viewBox="-30 -20 60 40"><g transform="scale(.8)">${iconShape(k)}</g></svg>${l}</button>`).join('')}</div>
+     <h3 style="margin-top:12px">Reading (0 to 99)</h3>
+     <div class="readout" style="background:${b?`var(--b-${b})`:'var(--surface)'}"><span>${pv===''?'--':pv}</span><small>${S.pending?(S.pending.idx!=null?'Editing point':'New point'):'No point'}</small></div>
+     <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="key" data-a="${n}">${n}</button>`).join('')}<button data-act="key" data-a="0">0</button><button data-act="del">Del</button><button class="go" data-act="next">Next</button></div>
+   </div>
+  </div>`;
+}
+function secDone(s){return s.lines.filter((_,i)=>S.chk[s.id+i]).length;}
+function sCheck(){
+  const sec=SECTIONS[S.sec];
+  return `<div class="secs" role="group" aria-label="Checklist sections">${SECTIONS.map((s,i)=>`<button data-act="sec" data-a="${i}" aria-pressed="${S.sec===i}">${s.name}<i>${secDone(s)}/${s.lines.length}</i></button>`).join('')}</div>
+  <div class="row between"><h2>${sec.name}</h2><button class="btn sm" data-act="passall">Pass all unmarked</button></div>
+  ${sec.lines.map((l,i)=>{const k=sec.id+i,v=S.chk[k];
+    return `<div class="line"><span class="lbl">${l}</span><span class="pf" role="group" aria-label="${esc(l)}">${[['P','P'],['F','F'],['N','N/A'],['R','R']].map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
+    ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}`;
+}
+function sTyres(){
+  const cols=['N/S/F','N/S/R','O/S/F','O/S/R','Spare'];
+  const rows=[['age','Tyre age'],['psi','Pressure (PSI or BAR)'],['mm','Tread depth (mm)']];
+  return `<h2>Wheels and tyres</h2><p class="muted">Caravan only.</p>
+  <div class="fields block">${inp('torque','Wheel bolt torque setting (Nm)','','number')}${inp('tsig','Signature (name)','')}${inp('tsig2','Double check signature (if possible)','')}</div>
+  <div class="block" style="overflow-x:auto"><div class="tyre" style="min-width:520px"><span></span>${cols.map(c=>`<b>${c}</b>`).join('')}
+  ${rows.map(([r,l])=>`<b>${l}</b>${cols.map((c,i)=>`<input data-f="ty${r}${i}" value="${fv('ty'+r+i)}" aria-label="${l} ${c}">`).join('')}`).join('')}</div></div>
+  <p class="muted block" style="font-size:12px">Recommended replacement if over 5 years old, and never use beyond 7 years old.</p>`;
+}
+function sFinal(){
+  const tick=k=>`<label><input type="checkbox" data-tick="${k}" ${S.tick[k]?'checked':''}>${k.replace(/^h:/,'')}</label>`;
+  return `<h2>Finalisation</h2>
+  <div class="block"><h3>Safety dates</h3><div class="fields">${inp('smoke','Smoke alarm expiry (if visible)','','date')}${inp('co','Carbon monoxide alarm expiry (if visible)','','date')}${inp('ext','Fire extinguisher expiry','','date')}</div></div>
+  <div class="block"><h3>Test results</h3><div class="fields">${inp('bat','Battery rest voltage','')}${inp('chg','Charger voltage','')}${inp('rcd1','RCD test, 1x trip time','')}${inp('rcd5','RCD test, 5x trip time','')}${inp('hose','Gas hose expiry date','','date')}${inp('reg','Regulator age','')}${inp('earth','Earth bond, chassis','')}${inp('cont','Continuity test, gas','')}</div></div>
+  <div class="block"><h3>Hand-over checks</h3><div class="checks">${HAND.map(h=>tick('h:'+h)).join('')}</div></div>
+  <div class="block"><h3>EICR offered</h3><div class="seg" role="group" aria-label="EICR offered">${['Yes','No','N/A'].map(v=>`<button data-act="eicr" data-a="${v}" aria-pressed="${S.eicr===v}">${v}</button>`).join('')}</div></div>
+  <div class="block"><h3>Service information, additional work and observations</h3><label class="fld"><textarea data-f="obs" rows="3" placeholder="Add anything the customer should know">${fv('obs')}</textarea></label>
+  <div class="checks" style="margin-top:4px"><label><input type="checkbox" data-tick="repaired" ${S.tick.repaired?'checked':''}>Repaired</label></div></div>`;
+}
+function stats(){
+  const all=VIEWS.flatMap(v=>S.data[v].pins);
+  const fails=Object.values(S.chk).filter(v=>v==='F').length;
+  const marked=Object.values(S.chk).filter(Boolean).length;
+  const total=SECTIONS.reduce((n,s)=>n+s.lines.length,0);
+  return `<div class="sumrow"><div><b>${all.length}</b>damp readings</div><div><b>${all.filter(p=>band(p.v)!=='green').length}</b>above 15%</div><div><b>${marked}/${total}</b>lines marked</div><div><b>${fails}</b>faults</div></div>`;
+}
+function sProof(){
+  const p=S.proof;
+  return `${S.backNote?`<div class="banner bad">MCS sent this back: ${esc(S.backNote)}</div>`:''}<h2>Job proof</h2><p class="muted">The video is the proof of the job. MCS Network checks it before the job is signed off.</p>
+  <div class="fields block"><div class="card"><h3>Video of the job</h3>
+    ${p.video?`<p><b>habitation-check-swift-bolero.mp4</b></p><p class="muted">142 MB, uploaded</p><button class="btn sm" data-act="vid" style="margin-top:8px">Remove video</button>`:`<p class="muted">MP4 or MOV</p><button class="btn primary" data-act="vid" style="margin-top:8px">Choose a video</button>`}</div>
+  <div class="card"><h3>Photos of the job</h3><p class="muted">${p.photos} added. Add photos to go with the video.</p><button class="btn sm" data-act="ph" style="margin-top:8px">Add a photo</button></div></div>`;
+}
+function sSign(){
+  return `<h2>Sign-off</h2><p class="muted">The engineer signs, then the customer signs at the job. MCS Network adds its signature after checking the job. The report prints all three on every page.</p>${stats()}
+  <div class="fields block"><div><h3>Engineer: Tom Mitchell</h3><canvas class="sigpad" data-sig="tech" aria-label="Engineer signature"></canvas><button class="btn sm" data-act="clr" data-a="tech" style="margin-top:6px">Clear</button></div>
+  <div><h3>Customer: Sarah Johnson</h3><canvas class="sigpad" data-sig="cust" aria-label="Customer signature"></canvas><button class="btn sm" data-act="clr" data-a="cust" style="margin-top:6px">Clear</button></div>
+  <div><h3>MCS Network sign-off</h3><div class="sigpad" style="display:grid;place-items:center;color:var(--muted);font-size:13px;text-align:center;padding:12px">Signed by MCS after it reviews the job</div><p class="muted" style="margin-top:6px;font-size:12px">Locked until the job is checked</p></div></div>`;
+}
+function sDone(){
+  const st=[['Report submitted','You and the customer have signed. The video and photos are uploaded.',1],['MCS Network checks the job','MCS reviews the video and documents, then adds the final signature.',0],['Report sent to the customer','The signed report is emailed to the customer automatically.',0],['You can request payment','Once MCS has signed off, send your invoice from Earnings.',0]];
+  return `<h2>Report submitted</h2><p>The inspection report for <b>${veh().name}</b> is stored against the job. The job now shows <span class="badge acc">Awaiting MCS check</span></p>${stats()}
+  <div class="card block"><h3>What happens next</h3><ul class="parts">${st.map(([a,b,d])=>`<li><b>${a}</b>${d?' (done)':''}<br><span class="muted">${b}</span></li>`).join('')}</ul></div>
+  <div class="row block"><button class="btn" data-act="reset">Restart the demo</button></div>`;
+}
+
+/* ---------- Part 2: repair quote ---------- */
+let M='insp',V='home',G=false;
+const RULES={vat:true,vatRate:20,vatBase:'sell',fee:15,callout:75,deduct:false,rate:80,markup:25,partShare:10};
+const money=n=>'£'+(Math.round((n+1e-9)*100)/100).toFixed(2);
+const dstr=(off)=>{const d=new Date();d.setDate(d.getDate()+off);return d.toISOString().slice(0,10);};
+const dnice=s=>new Date(s+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+function freshR(){return {step:'req',vis:{req:true},eng:'Tom Mitchell',src:'assessment',ver:1,parts:[],labour:[],status:'Draft',sent:false,accepted:false,paid:false,declined:'',declineText:'',terms:false,signName:'',reqf:{fault:'',pc:'BD1 1AA',paid:false},mode:'same',date:dstr(3),sched:'',proof:{video:false,photos:0},custOK:false,submitted:false,approved:false,backNote:'',reassigned:false,log:[]};}
+let R=freshR();
+const ST=()=>M==='insp'?S:R;
+const rsteps=()=>[['req','Customer asks'],['build','Engineer quotes'],['quote','Customer accepts'],['plan','Book the repair'],['work','Repair done'],['rev','MCS signs off'],['docs','Paperwork']];
+const ACT={job:'Engineer',details:'Engineer',damp:'Engineer',check:'Engineer',tyres:'Engineer',final:'Engineer',proof:'Engineer',sign:'Engineer',done:'Engineer',review:'MCS admin',req:'Customer',build:'Engineer',quote:'Customer',plan:'Engineer',work:'Engineer',rev:'MCS admin',docs:'Customer'};
+const WHO={'Engineer':'Engineer, on an iPad','Customer':'Customer, on the website','MCS admin':'MCS office'};
+const logr=m=>R.log.push(m);
+const qh=l=>Math.round((+l.h||0)*4)/4;
+function calc(){
+  const pc=R.parts.reduce((n,p)=>n+(+p.c||0),0);
+  const psell=pc*(1+RULES.markup/100), mk=psell-pc;
+  const hours=R.labour.reduce((n,l)=>n+qh(l),0), lab=hours*RULES.rate;
+  const base=RULES.vatBase==='sell'?psell:RULES.vatBase==='cost'?pc:psell+lab;
+  const vat=RULES.vat?base*RULES.vatRate/100:0;
+  const total=psell+lab+vat;
+  const credit=RULES.deduct&&R.src==='assessment'?Math.min(RULES.callout,total):0;
+  const engP=pc*RULES.partShare/100, engL=lab*(1-RULES.fee/100);
+  const supVat=RULES.vat?pc*RULES.vatRate/100:0;
+  const keeps=psell+lab-pc-engP-engL;
+  return {pc,psell,mk,hours,lab,vat,total,credit,due:total-credit,engP,engL,eng:engP+engL,supVat,keeps};
+}
+const tr_=(a,b,cl='')=>`<tr class="${cl}"><td>${a}</td><td>${b}</td></tr>`;
+function sumCustomer(short){
+  const c=calc();
+  return `<table class="mt">${short?tr_('Subtotal',money(c.psell+c.lab)):tr_('Parts',money(c.psell))+tr_('Labour ('+c.hours+' h at '+money(RULES.rate)+')',money(c.lab))}${RULES.vat?tr_('VAT ('+RULES.vatRate+'%)',money(c.vat)):''}${tr_('Total',money(c.total),'tot')}${c.credit?tr_('Call-out charge already paid','-'+money(c.credit),'sub')+tr_('To pay now',money(c.due),'tot'):''}</table>`;
+}
+function earnHtml(){
+  const c=calc();
+  return `<div class="earn"><span>Your earnings on this job</span><b>${money(c.eng)}</b><small>Parts share ${money(c.engP)} + labour after the ${RULES.fee}% fee ${money(c.engL)}. Held in your job pot until MCS signs the job off.</small></div>`;
+}
+function moneyFull(){
+  const c=calc();
+  const seg=[['Supplier',c.pc+c.supVat,'#8a93a0'],['Engineer',c.eng,'var(--accent)'],['MCS keeps',Math.max(0,c.keeps),'#2f4f9c'],['VAT collected',c.vat,'#d9a21f']];
+  const tot=seg.reduce((n,s)=>n+s[1],0)||1;
+  return `<div class="bar" role="img" aria-label="How the customer payment is split">${seg.map(([l,v,col])=>`<i style="width:${v/tot*100}%;background:${col}"></i>`).join('')}</div>
+  <div class="leg">${seg.map(([l,v,col])=>`<span style="--c:${col}">${l} ${money(v)}</span>`).join('')}</div>
+  <table class="mt" style="margin-top:10px">${tr_('Customer pays',money(c.total),'tot')}${tr_('MCS pays the supplier',money(c.pc)+(c.supVat?' + '+money(c.supVat)+' VAT':''))}${tr_('Engineer: '+RULES.partShare+'% of part cost',money(c.engP))}${tr_('Engineer: labour after the '+RULES.fee+'% fee',money(c.engL))}${tr_('Engineer total',money(c.eng),'tot')}${tr_('MCS keeps, before VAT is settled',money(c.keeps),'sub')}</table>`;
+}
+const rin=(path,label,ph='',type='text')=>{const v=path.split('.').reduce((o,k)=>o[k],R);return `<label class="fld"><span>${label}</span><input data-r="${path}" type="${type}" value="${esc(v??'')}" placeholder="${esc(ph)}"></label>`;};
+function diaryCount(d){const n=new Date(d+'T12:00').getDate();return (n*7)%6;}
+const IY='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.5 2.5L10 3"/></svg>',IN='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
+const pill=(t,k)=>`<span class="pill ${k}">${t}</span>`;
+const STAT={Draft:'grey',Sent:'blue',Viewed:'blue',Paid:'green',Declined:'red',Scheduled:'blue','Awaiting MCS check':'amber',Completed:'green'};
+
+function sReq(){
+  const f=R.reqf;
+  if(f.paid)return `<div class="pgh"><div><h2>Request received</h2></div>${pill('Paid '+money(RULES.callout),'green')}</div>
+  <div class="panel"><h3>What happens next</h3><ol class="parts" style="color:var(--fg)"><li><b>An engineer visits and looks at the fault.</b> We cannot give a price before someone has seen the vehicle.</li><li><b>You get the quote by email.</b> Open the link, no account needed.</li><li><b>You accept and pay, and the engineer books the repair with you.</b></li></ol>
+  <div class="cta"><button class="btn primary" data-act="tobuild">Continue as the engineer: build the quote</button></div></div>`;
+  return `<div class="pgh"><div><h2>Request a repair</h2><p>Tell us what is wrong and an engineer will come and assess it.</p></div></div>
+  <div class="cols"><div class="panel"><h3>Your vehicle and the fault</h3><div class="fields"><label class="fld"><span>Vehicle</span><input value="Swift Bolero 684" readonly></label>${rin('reqf.pc','Postcode')}
+  <label class="fld" style="grid-column:1/-1"><span>What is wrong?</span><textarea data-r="reqf.fault" rows="4" placeholder="For example: the water pump runs but there is no pressure at the taps">${esc(f.fault)}</textarea></label></div></div>
+  <div class="panel sticky"><h3>Call-out charge</h3><p style="font-size:26px;font-weight:800;margin:2px 0">${money(RULES.callout)}</p><p class="sub">For the engineer to visit and assess. ${RULES.deduct?'Taken off the repair price if you go ahead.':'Not taken off the repair price.'}</p><button class="btn primary big" data-act="reqpay" style="width:100%">Pay and send request</button></div></div>`;
+}
+function partRow(p,i){return `<div class="tr cp"><input class="inp" aria-label="Part description" data-pl="parts:${i}:d" value="${esc(p.d)}" placeholder="Part, e.g. water pump"><div class="pre"><span>£</span><input aria-label="Cost before VAT" data-pl="parts:${i}:c" type="number" min="0" step="0.01" value="${esc(p.c)}" placeholder="0.00"></div><button class="btn sm ghost" data-act="rcpt" data-a="${i}">${p.r?'Receipt added':'Add receipt'}</button><button class="x" aria-label="Remove part" data-act="prm" data-a="${i}">${IN}</button></div>`;}
+function labRow(l,i){return `<div class="tr cl"><input class="inp" aria-label="Work description" data-pl="labour:${i}:d" value="${esc(l.d)}" placeholder="Work, e.g. fit new pump"><input class="inp" aria-label="Hours" data-pl="labour:${i}:h" type="number" min="0" step="0.25" value="${esc(l.h)}" placeholder="Hours"><span data-lc="${i}" style="font-weight:600;font-variant-numeric:tabular-nums">${money(qh(l)*RULES.rate)}</span><button class="x" aria-label="Remove labour" data-act="lrm" data-a="${i}">${IN}</button></div>`;}
+function liveHtml(){return `<div class="panel"><h3>Quote summary</h3>${sumCustomer()}</div>${earnHtml()}<details class="panel"><summary style="cursor:pointer;font-weight:700">How the money splits</summary><div style="margin-top:10px">${moneyFull()}</div></details>`;}
+function sBuild(){
+  const src=R.src==='inspection'?'Found during the inspection':'After the call-out visit';
+  const hdr=`<div class="pgh"><div><h2>Repair quote</h2><p>Swift Bolero 684 &middot; Sarah Johnson &middot; ${src} &middot; version ${R.ver}</p></div></div>`;
+  if(R.sent){
+    const note=R.declined?`<div class="banner bad">The customer declined: ${esc(R.declined)}</div>`:R.paid?`<div class="banner ok">Version ${R.ver} was accepted and paid. It is locked.</div>`:`<div class="banner">Version ${R.ver} is with the customer. If you change it, it becomes version ${R.ver+1} and the customer must accept again.</div>`;
+    return `${hdr}${note}<div class="cols"><div class="panel"><h3>Quote sent</h3>${sumCustomer()}${R.paid?'':`<div class="cta"><button class="btn" data-act="editq">Edit as version ${R.ver+1}</button></div>`}</div><div>${earnHtml()}</div></div>`;
+  }
+  return `${hdr}<div class="cols"><div>
+  <div class="panel"><h3>Parts</h3><p class="sub">Type the part and what it cost you before VAT. The platform adds ${RULES.markup}% for the customer price.</p>
+  ${R.parts.length?`<div class="th cp"><span>Part</span><span>Your cost</span><span>Receipt</span><span></span></div>${R.parts.map(partRow).join('')}`:'<div class="empty">No parts yet</div>'}
+  <button class="btn sm" data-act="padd">Add a part</button></div>
+  <div class="panel"><h3>Labour</h3><p class="sub">Hours in quarter hours. MCS sets the rate at ${money(RULES.rate)} an hour.</p>
+  ${R.labour.length?`<div class="th cl"><span>Work</span><span>Hours</span><span>Cost</span><span></span></div>${R.labour.map(labRow).join('')}`:'<div class="empty">No labour yet</div>'}
+  <div class="cta"><button class="btn sm" data-act="ladd">Add labour</button>${R.src==='inspection'?'<button class="btn sm ghost" data-act="suggest">Add the failed inspection lines</button>':''}</div></div>
+  </div><div id="live">${liveHtml()}<button class="btn primary big" data-act="send" style="width:100%">Send quote to customer</button><p class="sub" style="margin-top:8px">The customer gets a link by email. MCS does not need to approve it first.</p></div></div>`;
+}
+function sQuote(){
+  if(!R.sent)return `<div class="pgh"><div><h2>Your quote</h2></div></div><div class="banner">No quote has been sent yet. Go back and send one as the engineer.</div>`;
+  if(R.status==='Sent'){R.status='Viewed';logr('Customer opened the quote link');}
+  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d||'Part')}</td><td>${money((+p.c||0)*(1+RULES.markup/100))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d||'Labour')} <span class="muted">(${qh(l)} h)</span></td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('');
+  const doc=`<div class="paper"><div class="ph"><div><b>Quote Q-20487-${R.ver}</b><br><span class="muted">Swift Bolero 684 &middot; prepared by ${R.eng}</span></div><div style="text-align:right"><span class="logo">MCS</span><br><span class="muted" style="font-size:12px">Valid until ${dnice(dstr(30))}</span></div></div><table class="mt">${rows}</table><div style="margin-top:10px">${sumCustomer(1)}</div></div>`;
+  if(R.paid)return `${doc}<div class="banner ok" style="margin-top:14px">Accepted and paid by ${esc(R.signName)}. Your engineer will agree a date with you.</div>`;
+  if(R.declined)return `${doc}<div class="banner bad" style="margin-top:14px">You declined this quote. Your engineer has been told.</div>`;
+  return `<div class="pgh"><div><h2>Your repair quote</h2><p>Check it, then accept and pay or decline. No account needed.</p></div></div>${doc}
+  <div class="panel" style="margin-top:14px"><h3>Accept this quote</h3><label class="row" style="gap:8px;margin:6px 0"><input type="checkbox" data-r="terms" ${R.terms?'checked':''}> I accept the terms</label>
+  <div class="fields">${rin('signName','Type your full name to sign','Sarah Johnson')}</div>
+  <div class="cta"><button class="btn primary big" data-act="accept">Accept and pay ${money(calc().due)}</button></div></div>
+  <details class="panel"><summary style="cursor:pointer;font-weight:700">Decline this quote</summary><label class="fld" style="margin-top:8px"><span>Reason (optional)</span><textarea data-r="declineText" rows="2"></textarea></label><div class="cta"><button class="btn" data-act="decline">Decline quote</button></div></details>`;
+}
+function sPlan(){
+  if(!R.paid)return `<div class="pgh"><div><h2>Book the repair</h2></div></div><div class="banner">The customer has not accepted and paid yet.</div>`;
+  const days=[1,2,3,4,5,6,7].map(o=>dstr(o));
+  return `<div class="pgh"><div><h2>Book the repair</h2><p>Paid. Agree a date with the customer, then put it in your diary.</p></div></div>
+  <div class="panel"><h3>When</h3><div class="cta" style="margin-top:6px"><button class="opt" aria-pressed="${R.mode==='same'}" data-act="when" data-a="same"><b>Same visit</b><span>Do the repair during the inspection visit</span></button><button class="opt" aria-pressed="${R.mode==='later'}" data-act="when" data-a="later"><b>Return visit</b><span>Pick a day when you have room</span></button></div>
+  ${R.mode==='later'?`<div class="days">${days.map(d=>{const n=diaryCount(d),full=n>=5;return `<button class="day" data-act="day" data-a="${d}" aria-pressed="${R.date===d}" ${full?'disabled':''}><b>${dnice(d)}</b><small>${full?'Full':n+' of 5 jobs'}</small></button>`;}).join('')}</div><p class="sub" style="margin-top:8px">Maximum 5 jobs a day.</p>`:''}
+  <div class="cta"><button class="btn primary" data-act="sched">${R.sched?'Update the diary':'Add to my diary'}</button></div>${R.sched?`<div class="banner ok" style="margin-top:10px">In your diary: ${esc(R.sched)}.</div>`:''}</div>
+  <div class="panel"><h3>Engineer on this job: ${R.eng}</h3><button class="btn sm ghost" data-act="reassign">${R.reassigned?'MCS: give it back to Tom Mitchell':'MCS: reallocate to Priya Shah'}</button></div>`;
+}
+function sWork(){
+  const p=R.proof;
+  return `${R.backNote?`<div class="banner bad">MCS sent this back: ${esc(R.backNote)}</div>`:''}<div class="pgh"><div><h2>Repair done</h2><p>Upload proof of the finished repair. MCS checks it before the job closes.</p></div></div>
+  <div class="cols"><div><div class="panel"><h3>Video of the finished repair</h3><div class="drop ${p.video?'has':''}">${p.video?'<b>repair-water-pump.mp4</b><br><span class="muted">Uploaded</span><br><button class="btn sm" data-act="rvid" style="margin-top:8px">Remove</button>':'<p class="sub" style="margin:0 0 8px">A short video, MP4 or MOV</p><button class="btn primary" data-act="rvid">Choose a video</button>'}</div></div>
+  <div class="panel"><h3>Photos</h3><div class="drop ${p.photos?'has':''}"><b>${p.photos} added</b><br><button class="btn sm" data-act="rph" style="margin-top:8px">Add a photo</button></div></div>
+  <label class="row" style="gap:8px;margin-bottom:14px"><input type="checkbox" data-r="custOK" ${R.custOK?'checked':''}> The customer confirms the work is finished</label>
+  <button class="btn primary big" data-act="rsub" ${R.submitted?'disabled':''}>${R.submitted?'Submitted for MCS check':'Submit for MCS check'}</button></div>
+  <div>${earnHtml()}</div></div>`;
+}
+function sRev(){
+  if(!R.submitted&&!R.approved)return `<div class="pgh"><div><h2>Jobs to check</h2></div></div><div class="banner">Nothing waiting. The engineer has not submitted the repair yet.</div>`;
+  const p=R.proof, ok=p.video||p.photos>0;
+  const ck=(t,y)=>`<div class="chk"><i class="${y?'y':'n'}">${y?IY:IN}</i>${t}</div>`;
+  return `<div class="pgh"><div><h2>Repair to check</h2><p>MCS-20487 &middot; Swift Bolero 684 &middot; ${R.eng}</p></div></div>
+  <div class="cols"><div><div class="panel"><h3>Proof</h3><div class="video" role="img" aria-label="Video preview"><i></i></div><p class="sub" style="margin-top:8px">${p.video?'Video uploaded':'No video'} &middot; ${p.photos} photos</p></div>
+  <div class="panel"><h3>Checks</h3>${ck('Video or photos uploaded',ok)}${ck('Customer confirmed the work is finished',R.custOK)}${ck('Repair is in the diary: '+esc(R.sched||'no'),!!R.sched)}</div></div>
+  <div><div class="panel"><h3>Money to release</h3>${moneyFull()}</div>
+  ${R.approved?`<div class="banner ok">Signed off. ${money(calc().eng)} is ready in the engineer's job pot. They can now request payment with an invoice, and MCS pays by bank transfer.</div>`
+  :`<button class="btn primary big" data-act="rapprove" style="width:100%" ${ok?'':'disabled'}>Sign off and release</button><div class="cta"><button class="btn" data-act="rback">Send back to the engineer</button></div>${ok?'':'<p class="sub">Needs a video or photos first.</p>'}`}</div></div>`;
+}
+function sDocs(){
+  if(!R.paid)return `<div class="pgh"><div><h2>Paperwork</h2></div></div><div class="banner">Nothing yet. Documents appear once the customer has accepted and paid.</div>`;
+  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d)}</td><td>${money((+p.c||0)*(1+RULES.markup/100))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d)} (${qh(l)} h)</td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('');
+  const dc=(t,s,tag)=>`<div class="paper"><div class="ph"><div><b>${t}</b><br><span class="muted">${s}</span></div>${tag}</div><table class="mt">${rows}</table><div style="margin-top:10px">${sumCustomer(1)}</div></div>`;
+  return `<div class="pgh"><div><h2>Paperwork and money</h2></div>${pill(R.status,STAT[R.status]||'grey')}</div>
+  <div class="seg" role="group" aria-label="Document" style="margin-bottom:12px"><button data-act="doc" data-a="invoice" aria-pressed="${R.doc!=='quote'}">Invoice</button><button data-act="doc" data-a="quote" aria-pressed="${R.doc==='quote'}">Quote</button></div>${R.doc==='quote'?dc('Quote Q-20487-'+R.ver,'Kept in the system and sent to the customer',''):dc('Invoice INV-20487-'+R.ver,'Made automatically once paid, same details',pill('PAID','green'))}
+  <div class="panel"><h3>Where the customer's payment goes</h3>${moneyFull()}</div>
+  <details class="panel"><summary style="cursor:pointer;font-weight:700">What happened</summary><ul class="logl" style="margin-top:8px">${R.log.map(l=>`<li>${esc(l)}</li>`).join('')}</ul></details>
+  <div class="cta"><button class="btn" data-act="reset">Restart the demo</button></div>`;
+}
+function sReview(){
+  const fails=Object.values(S.chk).filter(v=>v==='F').length, ok=S.proof.video||S.proof.photos>0, sig=S.sig.tech&&S.sig.cust, ready=ok&&sig;
+  const ck=(t,y)=>`<div class="chk"><i class="${y?'y':'n'}">${y?IY:IN}</i>${t}</div>`;
+  return `<div class="pgh"><div><h2>Inspection to check</h2><p>MCS-20487 &middot; ${veh().name} &middot; ${veh().form}</p></div></div>
+  <div class="cols"><div><div class="panel"><h3>Summary</h3>${stats()}</div><div class="panel"><h3>Checks before signing</h3>${ck('Video or photos uploaded',ok)}${ck('Engineer and customer have both signed',!!sig)}<div class="chk"><i class="${fails?'n':'y'}">${fails}</i>failed checklist ${fails===1?'line':'lines'}</div></div></div>
+  <div>${S.approved?`<div class="banner ok">Signed by a senior MCS engineer. The signed report was emailed to Sarah Johnson with all three signatures.</div><div class="panel"><h3>What the engineer can do now</h3><ul class="parts"><li>Request payment for the inspection with an invoice</li><li>${fails?`Quote a repair for the ${fails} failed ${fails>1?'lines':'line'}`:'Quote a repair if a fault was found'}</li></ul><button class="btn primary" data-act="toquote">Start the repair quote</button></div>`
+  :`<button class="btn primary big" data-act="iapprove" style="width:100%" ${ready?'':'disabled'}>Sign off the report</button><div class="cta"><button class="btn" data-act="iback">Send back to the engineer</button></div>${ready?'':'<p class="sub">Missing proof or a signature. Go back and complete them, or send it back.</p>'}`}</div></div>`;
+}
+function rReady(){
+  switch(R.step){
+    case 'req':return [R.reqf.paid,'Pay the call-out charge to continue'];
+    case 'build':return [R.sent,'Send the quote to continue'];
+    case 'quote':return [R.paid,'Accept and pay to continue'];
+    case 'plan':return [!!R.sched,'Add the repair to the diary'];
+    case 'work':return [R.submitted,'Submit the repair to continue'];
+    case 'rev':return [R.approved,'MCS signs off to continue'];
+  }
+  return [true,''];
+}
+const SCREENS={job:sJob,details:sDetails,damp:sDamp,check:sCheck,tyres:sTyres,final:sFinal,proof:sProof,sign:sSign,done:sDone,review:sReview,req:sReq,build:sBuild,quote:sQuote,plan:sPlan,work:sWork,rev:sRev,docs:sDocs};
+Object.assign(NOTES,{
+ review:{t:'MCS checks the inspection',did:'MCS watches the video, checks the documents and signs. The signed report is then emailed to the customer.',i:[
+  ['said','Three signatures: engineer, customer, then MCS. Engineers cannot sign a job off themselves.'],
+  ['ours','Sign-off is blocked until there is proof and both signatures. Send back returns the engineer to Job proof.'],
+  ['ask','If MCS finds a problem, does the job go back to the engineer? Can the engineer edit a report after submitting?']]},
+ req:{t:'Customer asks for a repair',did:'Path 1. The customer asks for a repair on the website and pays a call-out charge so an engineer can assess it.',i:[
+  ['said','The customer uses the Service Request tab, enters their details and pays a call-out charge. MCS cannot quote until an engineer has seen the job.'],
+  ['ours','The call-out is paid before anyone is sent.'],
+  ['ask','How much is the call-out charge? Is it taken off the repair if the customer goes ahead? Is the visit booked into the diary like a normal job?']]},
+ build:{t:'Engineer builds the quote',did:'The engineer lists the parts and labour. The totals and their own earnings update as they type.',i:[
+  ['said','Part description and a cost box. 25% markup on the cost only, not on VAT. A receipt or photo is optional. MCS does not approve the quote first. Labour is 80 pounds an hour. Path 2: the engineer found a fault during a service and quotes then, or on a return visit.'],
+  ['ours','Editing a sent quote makes a new version. Failed inspection lines can be added as starting lines.'],
+  ['ask','Is VAT charged on the marked-up part price, on cost only, or on labour too? Brian earlier said no VAT now. Should the customer see the trade cost? Send the quote by SMS as well as email?']]},
+ quote:{t:'Customer accepts and pays',did:'The customer opens the emailed link, with no login, and accepts and pays, or declines.',i:[
+  ['said','The quote lets the customer pay upfront. It is valid for 30 days.'],
+  ['ours','Accepting needs the terms ticked and a typed name. Declining tells the engineer and keeps the reason.'],
+  ['ask','The terms text. Does the customer pay by card on acceptance? This sits against MCS paying engineers outside the platform.']]},
+ plan:{t:'Book the repair',did:'The engineer agrees a date with the customer and puts it in the diary. MCS can reallocate the job.',i:[
+  ['said','Same visit or a return date. Only the engineer or MCS chooses it, and it goes into the diary. Usually the same engineer, but MCS can reallocate. Maximum 5 jobs a day.'],
+  ['ours','Full days cannot be picked.'],
+  ['ask','How long is a repair job, and how much travel buffer is left between jobs?']]},
+ work:{t:'Repair done',did:'The engineer uploads a short video or photos of the finished repair.',i:[
+  ['said','Same process as an inspection: short video or photos, then MCS signs off to release payment.'],
+  ['ours','The engineer earnings stay held until sign-off.'],
+  ['ask','Does the customer sign for the repair, as for the inspection? Is there a form as well as the video?']]},
+ rev:{t:'MCS signs off the repair',did:'MCS checks the proof and signs off. That releases the engineer earnings.',i:[
+  ['said','MCS signs off to release payment. The engineer is due 10% of the part cost, added to their job pot so they are paid when the job is complete.'],
+  ['ours','Sign-off is blocked without proof. Send back returns the job with a reason.'],
+  ['ask','Is the engineer paid the same way as for inspections: invoice request, then bank transfer?']]},
+ docs:{t:'Paperwork and money',did:'The customer keeps the quote. An invoice with the same details is made once they have paid. The bar shows where the payment goes.',i:[
+  ['said','MCS pays suppliers from a central account. On a 100 pound part the customer pays 125 plus VAT, MCS keeps it, and the engineer is due 10 pounds in their job pot. An invoice is made once paid.'],
+  ['ours','Use Try different answers to see the effect of VAT, the fee and the call-out.'],
+  ['ask','Labour split on repairs (we use the inspection fee). Refund after 48 hours. What "refund portion of the labour" means.']]}
+});
+
+function chrome(act,A,label){
+  const eng=M==='insp'?'Tom Mitchell':R.eng, init=act==='MCS admin'?'MC':eng.split(' ').map(x=>x[0]).join('');
+  const navE=['Dashboard','My Jobs','Diary','Earnings','Documents'], navA=['Jobs to check','Payments','Engineers','Customers','Reports'];
+  const onE=A.step==='plan'?'Diary':'My Jobs', onA=act==='MCS admin'?(A.step==='review'||A.step==='rev'?'Jobs to check':'Jobs to check'):'';
+  if(act==='Customer'){
+    const path={req:'service-request',quote:'quote/Q-20487-'+R.ver,docs:'documents'}[A.step]||'';
+    return `<div class="bwin"><div class="btop"><i></i><i></i><i></i><div class="url">mcsnetwork.co.uk/${path}</div></div><div class="site"><div class="shead"><span class="logo">MCS</span><span>Services</span><span>Engineers</span><span>Contact</span><span class="sp btn primary sm">Book a service</span></div><div class="screen" id="screen"></div></div></div>`;
+  }
+  const adm=act==='MCS admin';
+  return `<div class="app"><aside class="side ${adm?'adm':''}"><div class="sl"><span class="logo">MCS</span>${adm?'Admin':'Network'}</div>${(adm?navA:navE).map(n=>`<div class="ni ${n===(adm?onA:onE)?'on':''}">${n}</div>`).join('')}<div class="usr"><span class="av">${init}</span>${adm?'MCS Network':eng}</div></aside><div class="main"><div class="tbar"><span class="crumb">${adm?'Admin':'My Jobs'} / ${label}</span><span class="row" id="tstat" style="gap:8px"></span></div><div class="screen" id="screen"></div></div></div>`;
+}
+function homeHtml(){
+  const li=a=>a.map(x=>'<li>'+x+'</li>').join('');
+  return `<h2>One job, from the first booking to the paid invoice</h2>
+  <p class="lede">MCS Network connects customers with certified engineers for motorhome and caravan servicing. This walkthrough shows the checking system and the repair quote system as real screens, so Brian can test the flow and the business rules before we design them.</p>
+  <div class="startrow"><button class="btn primary big" data-act="start" data-a="insp">Start Part 1: the inspection</button><button class="btn big" data-act="start" data-a="rep">Start Part 2: a repair quote</button></div>
+  <section class="hsec"><h3>Who uses it</h3><dl class="who"><dt>Customer</dt><dd>Books on the website and gets a quote or report by email. No account, no login.</dd><dt>Engineer</dt><dd>Works on an iPad: jobs, the inspection checklist, quotes, diary and earnings.</dd><dt>MCS office</dt><dd>Checks the proof, signs the job off, and pays engineers by bank transfer. Admin works but is not designed in Figma.</dd></dl></section>
+  <section class="hsec"><h3>The two parts</h3><div class="two"><div><h4>Part 1: inspection</h4><ol>${li(['Engineer opens the job and starts the inspection','Vehicle details, damp survey, checklist, final checks','Video or photos uploaded as proof','Engineer and customer sign','MCS checks and signs; the report is emailed to the customer'])}</ol></div><div><h4>Part 2: repair quote</h4><ol>${li(['Customer asks for a repair and pays a call-out charge, or the engineer finds a fault during a service','Engineer builds the quote on site or later','Customer accepts and pays, or declines','Engineer books the repair into the diary','Engineer uploads proof; MCS signs off','Quote and invoice kept for the customer'])}</ol></div></div></section>
+  <section class="hsec"><h3>Agreed with Brian</h3><div class="two"><div><h4>Booking and diary</h4><ul>${li(['24 hours minimum notice, no maximum','Up to 5 jobs a day, with a travel buffer the engineer sets','3 hours per job to start with','Engineer accepts or declines within 24 hours','Cancel through the contact form; reschedule needs 48 hours; full refund only within 48 hours of booking'])}</ul></div><div><h4>Checking and money</h4><ul>${li(['Three signatures: engineer, customer, then MCS','Customer pays 100% upfront into MCS; engineers are not paid in the platform','Engineer requests payment with an invoice; MCS pays by bank transfer','MCS fee: 15% for the first four engineers, 20% after, set per engineer','Repairs: 25% markup on part cost only, labour at 80 pounds an hour, quote valid 30 days','Engineer earns 10% of part cost, held until MCS signs off'])}</ul></div></div></section>
+  <section class="hsec"><h3>Still to decide</h3><ul class="open">${li(['Call-out charge: the amount, and whether it comes off the repair price','VAT: charged or not, and on what (parts at customer price, cost only, or labour too)','Whether the customer pays by card on accepting a quote','What happens to an open job if no engineer accepts','Whether MCS sends a failed job back, and whether an engineer can edit a report after submitting','Quote terms text and the booking email wording'])}</ul></section>
+  <section class="hsec"><h3>How to use it</h3><p style="margin:0">Pick a part and click through. Each screen is what that person would see. Use Show notes for what Brian said and what is open on the current step. Use Try different answers to change an open point and watch the money change.</p></section>`;
+}
+function render(){
+  $('#home').hidden=V!=='home';$('#flow').hidden=V!=='flow';
+  ['mi','mr','vseg','rbtn','nbtn'].forEach(i=>{const e=$('#'+i);if(e)e.closest('.seg')?e.closest('.seg').hidden=V==='home':e.hidden=V==='home';});
+  document.querySelector('[data-act=home]').hidden=V==='home';
+  if(V==='home'){$('#home').innerHTML=homeHtml();return;}
+  $('.stage').classList.toggle('noguide',!G);$('#nbtn').setAttribute('aria-pressed',G);$('#nbtn').textContent=G?'Hide notes':'Show notes';
+  const A=ST(), list=M==='insp'?steps():rsteps(), idx=list.findIndex(s=>s[0]===A.step), act=ACT[A.step], label=list[idx][1];
+  $('#mi').setAttribute('aria-pressed',M==='insp');$('#mr').setAttribute('aria-pressed',M==='rep');
+  $('#vseg').hidden=M!=='insp';
+  $('#vm').setAttribute('aria-pressed',S.vehicle==='motorhome');$('#vc').setAttribute('aria-pressed',S.vehicle==='caravan');
+  $('#journey').innerHTML=list.map(([k,l],i)=>{const a=ACT[k];return `<button class="jp ${A.step===k?'on':''} ${A.vis[k]&&A.step!==k?'vis':''}" data-act="go" data-a="${k}" title="${a}${k==='tyres'?', caravan only':''}" ${A.step===k?'aria-current="step"':''}><span class="jl"><i class="dot ${a.replace(' ','-')}"></i>${l}</span></button>`;}).join('');
+  const old=$('#screen'), top=old?old.scrollTop:0;
+  $('#device').innerHTML=chrome(act,A,label);
+  const sc=$('#screen');
+  sc.innerHTML=SCREENS[A.step]();
+  sc.scrollTop=A.keepScroll?top:0; A.keepScroll=false;
+  const ts=$('#tstat');
+  if(ts){
+    if(M==='insp')ts.innerHTML=(S.approved?pill('Completed','green'):S.step==='done'||S.step==='review'?pill('Awaiting MCS check','amber'):S.step==='job'?pill('Accepted','amber'):pill('In progress','blue'))+(act==='Engineer'&&S.step!=='done'?'<button class="btn" data-act="save">Save for later</button>':'');
+    else ts.innerHTML=pill(R.status,STAT[R.status]||'grey');
+  }
+  const last=idx===list.length-1;
+  let mid=`<b>Step ${idx+1} of ${list.length}</b>`, hint='';
+  if(M==='rep')hint=rReady()[1];
+  const okNext=M==='insp'||rReady()[0];
+  const fwdLabel=M==='insp'?(S.step==='sign'?'Submit for MCS review':S.step==='done'?'Open MCS check':S.step==='check'&&S.sec<SECTIONS.length-1?'Next section':'Next step'):'Next step';
+  $('#foot').innerHTML=`${idx===0?'<span></span>':'<button class="btn" data-act="back">Previous step</button>'}<div class="dmid">${mid}${okNext?'':hint}</div>${last?'<span></span>':`<button class="btn primary" data-act="fwd" ${okNext?'':'disabled'}>${fwdLabel}</button>`}`;
+  const n=NOTES[A.step], K={said:['Brian confirmed','ok'],ours:['Our suggestion','info'],ask:['Brian still needs to decide','warn']};
+  $('#notes').innerHTML=`<h2>${n.t}</h2><span class="gwho">${WHO[act]}</span><p class="gdid">${n.did}</p>${n.i.filter(i=>i[0]==='ask').map(([t,x])=>`<div class="gi ${K[t][1]}"><b>${K[t][0]}</b><p>${x}</p></div>`).join('')}<details class="gmore"><summary>What is agreed and what we suggest</summary>${n.i.filter(i=>i[0]!=='ask').map(([t,x])=>`<div class="gi ${K[t][1]}"><b>${K[t][0]}</b><p>${x}</p></div>`).join('')}</details>`;
+  if(M==='insp'&&S.step==='sign')initSig();
+}
+function renderRules(){
+  const o=(v,l,sel)=>`<option value="${v}" ${sel?'selected':''}>${l}</option>`;
+  $('#rules').innerHTML=`
+  <label class="ck"><input type="checkbox" data-rule="vat" ${RULES.vat?'checked':''}> Charge VAT to the customer</label>
+  <label>VAT rate (%)<input data-rule="vatRate" type="number" min="0" max="30" value="${RULES.vatRate}"></label>
+  <label>VAT is charged on<select data-rule="vatBase">${o('sell','Parts at the customer price',RULES.vatBase==='sell')}${o('cost','Parts at trade cost only',RULES.vatBase==='cost')}${o('all','Parts and labour',RULES.vatBase==='all')}</select></label>
+  <label>MCS fee on labour<select data-rule="fee">${o(15,'15% (first four engineers)',RULES.fee==15)}${o(20,'20% (later engineers)',RULES.fee==20)}</select></label>
+  <label>Call-out charge, pounds (amount not given yet)<input data-rule="callout" type="number" min="0" value="${RULES.callout}"></label>
+  <label class="ck"><input type="checkbox" data-rule="deduct" ${RULES.deduct?'checked':''}> Call-out is taken off the repair price</label>`;
+}
+function keep(){ST().keepScroll=true;}
+function go(k){const A=ST();A.step=k;A.vis[k]=true;if(M==='insp'){S.tool=null;S.pending=null;S.selIcon=null;}render();}
+function move(dir){
+  const A=ST(), list=(M==='insp'?steps():rsteps()).map(s=>s[0]), i=list.indexOf(A.step);
+  if(M==='insp'&&S.step==='check'){
+    if(dir>0&&S.sec<SECTIONS.length-1){S.sec++;render();return;}
+    if(dir<0&&S.sec>0){S.sec--;render();return;}
+  }
+  const j=Math.max(0,Math.min(list.length-1,i+dir));
+  go(list[j]);
+  if(M==='insp'&&S.step==='check'&&dir<0)S.sec=SECTIONS.length-1,render();
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600);}
+function setVehicle(v){S=fresh(v);render();}
+function restart(){S=fresh(S.vehicle);R=freshR();M='insp';V='home';G=false;render();}
+$('#vm').onclick=()=>setVehicle('motorhome');$('#vc').onclick=()=>setVehicle('caravan');
+
+function commit(){
+  const p=S.pending; if(!p||p.val==='')return;
+  const d=S.data[S.view], v=Math.min(99,+p.val);
+  if(p.idx!=null)d.pins[p.idx].v=v; else d.pins.push({x:p.x,y:p.y,v});
+  S.last=`Saved ${v} (${BANDS.find(b=>b[0]===band(v))[1]}). Tap the next point.`;
+  S.pending=null;keep();render();
+}
+document.addEventListener('click',e=>{
+  const svg=e.target.closest('svg.diagram');
+  if(svg){
+    const r=svg.getBoundingClientRect(), x=Math.round((e.clientX-r.left)/r.width*520), y=Math.round((e.clientY-r.top)/r.height*260), d=S.data[S.view];
+    const ic=e.target.closest('[data-ic]'), pn=e.target.closest('[data-pin]');
+    keep();
+    if(ic){S.selIcon=+ic.dataset.ic;S.tool=null;S.pending=null;render();return;}
+    if(pn){const k=+pn.dataset.pin,p=d.pins[k];S.pending={x:p.x,y:p.y,val:String(p.v),idx:k};S.selIcon=null;render();return;}
+    if(S.tool){const id=uid++;d.icons.push({id,type:S.tool,x,y,rot:0,s:1});S.selIcon=id;S.tool=null;S.last='Icon placed. Use the buttons below the drawing to rotate or resize it.';render();return;}
+    S.selIcon=null;S.pending={x,y,val:'',idx:null};render();return;
+  }
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const a=b.dataset.a, act=b.dataset.act;
+  switch(act){
+    case 'go':go(a);break;
+    case 'back':move(-1);break;
+    case 'fwd':move(1);break;
+    case 'save':toast('Progress saved. The engineer can resume from My Jobs (to confirm with Brian).');break;
+    case 'view':S.view=a;S.pending=null;S.selIcon=null;S.last='';keep();render();break;
+    case 'tool':S.tool=S.tool===a?null:a;S.pending=null;S.selIcon=null;S.last=S.tool?'Now tap the drawing where the icon goes.':'';keep();render();break;
+    case 'key':if(S.pending&&S.pending.val.length<2){S.pending.val+=a;keep();render();}break;
+    case 'del':if(S.pending){S.pending.val=S.pending.val.slice(0,-1);keep();render();}break;
+    case 'next':commit();break;
+    case 'ic':{const d=S.data[S.view],i=d.icons.find(x=>x.id===S.selIcon);if(!i)break;
+      if(a==='rl')i.rot-=15;if(a==='rr')i.rot+=15;if(a==='sm')i.s=Math.max(.6,+(i.s-.2).toFixed(1));if(a==='lg')i.s=Math.min(2.4,+(i.s+.2).toFixed(1));
+      if(a==='rm'){d.icons=d.icons.filter(x=>x.id!==i.id);S.selIcon=null;}
+      keep();render();break;}
+    case 'sec':S.sec=+a;render();break;
+    case 'chk':S.chk[a]=S.chk[a]===b.dataset.b?'':b.dataset.b;keep();render();break;
+    case 'passall':SECTIONS[S.sec].lines.forEach((_,i)=>{const k=SECTIONS[S.sec].id+i;if(!S.chk[k])S.chk[k]='P';});keep();render();break;
+    case 'photo':S.photo[a]=!S.photo[a];keep();render();break;
+    case 'vid':S.proof.video=!S.proof.video;keep();render();break;
+    case 'ph':S.proof.photos=Math.min(8,S.proof.photos+1);keep();render();break;
+    case 'eicr':S.eicr=a;keep();render();break;
+    case 'clr':delete S.sig[a];render();break;
+    case 'reset':restart();break;
+    case 'mode':M=a;render();break;
+    case 'start':V='flow';M=a;G=false;if(a==='insp'){S=fresh(S.vehicle);}else{R=freshR();}render();window.scrollTo(0,0);break;
+    case 'home':V='home';render();window.scrollTo(0,0);break;
+    case 'notes':G=!G;render();break;
+    case 'reqpay':if(!R.reqf.fault.trim()){toast('Describe what is wrong first.');break;}R.reqf.paid=true;logr('Customer sent a service request and paid the call-out charge '+money(RULES.callout));keep();render();break;
+    case 'tobuild':R.src='assessment';go('build');break;
+    case 'padd':R.parts.push({d:'',c:'',r:false});keep();render();break;
+    case 'ladd':R.labour.push({d:'',h:''});keep();render();break;
+    case 'prm':R.parts.splice(+a,1);keep();render();break;
+    case 'lrm':R.labour.splice(+a,1);keep();render();break;
+    case 'rcpt':R.parts[+a].r=!R.parts[+a].r;keep();render();break;
+    case 'suggest':{
+      const found=[];SECTIONS.forEach(s=>s.lines.forEach((l,i)=>{if(S.chk[s.id+i]==='F')found.push(l);}));
+      if(!found.length){toast('No failed lines yet. Mark a line F in the inspection checklist, or add lines by hand.');break;}
+      found.forEach(l=>{const d='Fix: '+l;if(!R.labour.some(x=>x.d===d))R.labour.push({d,h:''});});
+      keep();render();break;}
+    case 'send':{
+      const bad=R.parts.some(p=>!p.d.trim()||!(+p.c>0))||R.labour.some(l=>!l.d.trim()||!(+l.h>0));
+      if(!R.parts.length&&!R.labour.length){toast('Add at least one part or labour line.');break;}
+      if(bad){toast('Every line needs a description and a number above zero.');break;}
+      R.sent=true;R.declined='';R.status='Sent';logr('Engineer sent quote version '+R.ver+' ('+money(calc().total)+')');keep();render();break;}
+    case 'editq':R.ver++;R.sent=false;R.declined='';R.status='Draft';R.terms=false;R.signName='';logr('Engineer started quote version '+R.ver);keep();render();break;
+    case 'accept':if(!R.terms||!R.signName.trim()){toast('Tick the terms and type your name first.');break;}R.accepted=R.paid=true;R.status='Paid';logr('Customer accepted and paid '+money(calc().due));render();break;
+    case 'decline':R.declined=(R.declineText||'').trim()||'No reason given';R.status='Declined';logr('Customer declined: '+R.declined);render();break;
+    case 'when':R.mode=a;keep();render();break;
+    case 'doc':R.doc=a;keep();render();break;
+    case 'day':R.date=a;keep();render();break;
+    case 'sched':{
+      if(R.mode==='later'&&diaryCount(R.date)>=5){toast('That day already has 5 jobs. Pick another date.');break;}
+      R.sched=R.mode==='same'?'same visit as the inspection':dnice(R.date);R.status='Scheduled';logr('Repair put in the diary: '+R.sched);keep();render();break;}
+    case 'reassign':R.reassigned=!R.reassigned;R.eng=R.reassigned?'Priya Shah':'Tom Mitchell';logr('MCS set the engineer to '+R.eng);keep();render();break;
+    case 'rvid':R.proof.video=!R.proof.video;keep();render();break;
+    case 'rph':R.proof.photos=Math.min(8,R.proof.photos+1);keep();render();break;
+    case 'rsub':if(!(R.proof.video||R.proof.photos>0)){toast('Add a video or photos first.');break;}R.submitted=true;R.backNote='';R.status='Awaiting MCS check';logr('Engineer submitted the repair proof');keep();render();break;
+    case 'rapprove':R.approved=true;R.status='Completed';logr('MCS signed off the repair; '+money(calc().eng)+' released to the engineer job pot');keep();render();break;
+    case 'rback':R.submitted=false;R.approved=false;R.backNote='Please add a clearer video of the finished repair.';R.status='Scheduled';logr('MCS sent the repair back to the engineer');go('work');break;
+    case 'iapprove':S.approved=true;S.backNote='';keep();render();break;
+    case 'iback':S.backNote='the video does not show the gas tightness test.';go('proof');break;
+    case 'toquote':M='rep';R.src='inspection';R.vis.build=true;R.step='build';logr('Engineer started a quote from the inspection');render();break;
+  }
+});
+function setPath(o,p,v){const k=p.split('.');const last=k.pop();k.reduce((x,y)=>x[y],o)[last]=v;}
+document.addEventListener('input',e=>{
+  const t=e.target,n=t.dataset.f;if(n)S.f[n]=t.value;
+  if(t.dataset.r&&!['checkbox','date'].includes(t.type))setPath(R,t.dataset.r,t.value);
+  if(t.dataset.pl){const [l,i,f]=t.dataset.pl.split(':');R[l][+i][f]=t.value;const x=$('#live');if(x){const keepSend=x.querySelector('[data-act=send]');document.querySelectorAll('[data-lc]').forEach(e=>e.textContent=money(qh(R.labour[+e.dataset.lc])*RULES.rate));x.querySelectorAll('.panel,.earn,details').forEach(e=>e.remove());x.insertAdjacentHTML('afterbegin',liveHtml());}}
+});
+document.addEventListener('change',e=>{
+  const t=e.target,k=t.dataset.tick;if(k)S.tick[k]=t.checked;
+  if(t.dataset.r&&['checkbox','date'].includes(t.type)){setPath(R,t.dataset.r,t.type==='checkbox'?t.checked:t.value);keep();render();}
+  if(t.dataset.rule){const r=t.dataset.rule;RULES[r]=t.type==='checkbox'?t.checked:t.tagName==='SELECT'&&r!=='vatBase'?+t.value:t.type==='number'?(+t.value||0):t.value;keep();render();}
+});
+
+function initSig(){
+  document.querySelectorAll('canvas.sigpad').forEach(c=>{
+    c.width=c.clientWidth;c.height=140;
+    const ctx=c.getContext('2d'),who=c.dataset.sig;
+    ctx.lineWidth=2.4;ctx.lineCap='round';ctx.strokeStyle=getComputedStyle(document.body).color;
+    if(S.sig[who]){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,c.width,c.height);im.src=S.sig[who];}
+    let down=false;
+    const pt=e=>{const r=c.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+    c.onpointerdown=e=>{down=true;c.setPointerCapture(e.pointerId);const [x,y]=pt(e);ctx.beginPath();ctx.moveTo(x,y);};
+    c.onpointermove=e=>{if(!down)return;const [x,y]=pt(e);ctx.lineTo(x,y);ctx.stroke();};
+    const end=()=>{if(!down)return;down=false;try{S.sig[who]=c.toDataURL();}catch(_){}};
+    c.onpointerup=end;c.onpointercancel=end;
+  });
+}
+renderRules();$('#rbtn').onclick=()=>{const b=$('#rulesbox');b.hidden=!b.hidden;$('#rbtn').setAttribute('aria-expanded',!b.hidden);};render();
+</script>

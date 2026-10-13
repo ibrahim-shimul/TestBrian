@@ -164,6 +164,9 @@ svg.diagram{width:100%;height:auto;display:block;background:var(--surface2);bord
 .doc{border:1.5px solid var(--fg);border-radius:6px;padding:14px;background:var(--surface)}
 @media (max-width:640px){.lnrow{grid-template-columns:1fr 1fr}}
 /* ---- walkthrough shell v2 ---- */
+.line.miss,.fld.miss input{background:var(--bad-bg)}.line.miss{border-radius:8px;padding-inline:8px}.line.hl{outline:2px solid var(--accent);border-radius:8px}
+.disc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface2);font-size:12.5px;margin-top:12px}.disc b{display:block;margin-bottom:2px}.disc p{margin:0}
+.btn[aria-pressed="true"]{background:var(--fg);color:var(--surface)}
 [hidden]{display:none!important}
 .home{max-width:920px;margin:8px auto 0}
 .home h2{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:0 0 12px;max-width:20ch}
@@ -327,21 +330,67 @@ input[type=checkbox]{accent-color:var(--accent)}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const VIEWS=['front','rear','nearside','offside','ceiling','floor'];
-const SECTIONS=[
+const SEC_M=[
  {id:'under',name:'Underbody',lines:['Corner steadies (where applicable)','Folding steps (where applicable)','Under-slung tanks and pipes']},
- {id:'elec',name:'Electrical system',lines:['230V and 12V fridge operation','Leisure battery (if fitted)','Interior lighting and equipment','Check fuse box and rating','Earth bonding continuity test','230V sockets']},
+ {id:'elec',name:'Electrical system',lines:['Leisure battery (if fitted)','230V and 12V fridge operation','Interior lighting and equipment','Awning light','Wiring on ELV circuits (visual)','LV inlet plug and extension','Check fuse box and rating','Earth bonding continuity test','230V consumer unit load test RCD','230V sockets','Electric awning (if fitted)','Check operation of 230V appliances, fans and luminaires','Check any aftermarket items','Charge voltage']},
  {id:'gas',name:'LPG gas systems',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Check security of LPG tank (if fitted)','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear','Appliances: check operation including FFDs']},
  {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet']},
- {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Floor','Furniture','Blinds and fly screens']},
+ {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Body attachments: check security (including ladders, cycle rack, lockers, aerials, satellite dishes)','Floor','Furniture','Blinds and fly screens']},
  {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights','Damp test: note reading on the damp survey']},
- {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm','Press test button on CO alarm (if fitted)','Fire extinguisher fitted: check security of its housing']}
+ {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing']}
 ];
+const SEC_C=[
+ {id:'chas',name:'Chassis and running gear',lines:['Coupling head','Ball acting stabiliser','Coupling head gaiter','Breakaway cable and slip','Drawbar','Corner steadies','Spare wheel carrier (if fitted)','Jockey wheel','Chassis','Braking system','Wheels and tyres','Suspension and axle','Handbrake mechanism']},
+ {id:'elec',name:'Electrical system',lines:['13pin/7pin plugs, cables and storage position','Road lights and reflectors','Leisure battery (if fitted)','Battery compartment','230V and 12V fridge operation','Interior lighting and equipment','Awning light','Wiring on ELV circuits (visual)','LV inlet plug and extension lead','Earth bonding continuity test','230V consumer unit load test RCD','230V sockets','Charge voltage','Check operation of all 230V appliances, fans and luminaires','Check all aftermarket items']},
+ {id:'gas',name:'LPG gas system',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Appliances: check operation of all gas appliances fitted including FFDs','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear']},
+ {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet']},
+ {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Roof straps (if applicable)','Grab handles','Number plate: check it is marked BS AU 145d and check security and legibility','Floor','Furniture','Blinds and fly screens','Rising roof (if applicable)']},
+ {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights','Damp test: carry out and note reading on the damp report sheet']},
+ {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing']}
+];
+const secs=()=>S.vehicle==='caravan'?SEC_C:SEC_M;
+const TESTS=[['bat','Battery rest voltage'],['chg','Charger voltage'],['rcd1','RCD test, 1x trip time'],['rcd5','RCD test, 5x trip time'],['hose','Gas hose expiry date'],['reg','Regulator age'],['earth','Earth bond, chassis'],['cont','Continuity test, gas']];
+const DISC_DETAILS='IMPORTANT: All appliances are tested for operation only. This does not confirm that they are working to the prescribed standard. Additional servicing may be required for warranty purposes/products (e.g. fridge).';
+const DISC_M='This service report only relates to the condition of the above mentioned motorhome at the time of completion of the service. It should not be regarded as evidence of the condition of the items at any other time. Important: Appliances are checked for operation only, additional servicing may be required for warranty purposes. The habitation service does not include any servicing of the base vehicle and road legal requirements.';
+const DISC_C='This service report only relates to the condition of the above mentioned motorhome at the time of completion of the service. It should not be regarded as evidence of the condition of the items at any other time. Important: Appliances are checked for operation only, additional servicing may be required for warranty purposes.';
+const DAMP_BANDS=[['green','0 to 15%','No cause for concern. Only readings of over 15% are recorded.'],['amber','15 to 20%','May require further investigation. Compare with average readings and consider a recheck after 3 months.'],['orange','20 to 30%','Will require further investigation to look for other possible indications of water ingress. Possible resealing required to avoid further degrading.'],['red','30% and above','May indicate that structural damage or deterioration is occurring. Possible resealing required to avoid further degrading, followed by immediate rectification action as necessary.']];
+const DAMP_NOTE='We would emphasise that the above report accurately reflects the condition of your motorhome at the date stated. These readings may be subject to atmospheric conditions and the company cannot accept any liability for damp, which may become apparent at a future date. Completed in line with the latest AWS Damp Testing Matrix and carried out in accordance with the latest AWS service technician\'s handbook and manufacturers guidance in relation to areas required to tests. Only the inside of the habitation unit is tested. Personal belongings will not be removed from lockers and storage areas, which therefore, may limit the scope of the damp report.';
+const disc=t=>`<div class="disc"><b>Disclaimer</b><p>${t}</p></div>`;
+function problems(){
+  const p=[];
+  secs().forEach((sc,si)=>sc.lines.forEach((l,i)=>{const k=sc.id+i;if(!S.chk[k])p.push({t:sc.name+': '+l,go:['check',si,k]});}));
+  TESTS.forEach(([k,l])=>{if(!String(S.f[k]??'').trim())p.push({t:'Test result: '+l,go:['final',null,k]});});
+  if(!(S.proof.video||S.proof.photos>0))p.push({t:'Job proof: add a video or photos',go:['proof']});
+  if(!S.sig.tech||!S.sig.cust)p.push({t:'Engineer and customer signatures',go:['sign']});
+  return p;
+}
+function grouped(){
+  const out=[],seen={};
+  problems().forEach(x=>{if(x.go[0]==='check'){const si=x.go[1];if(seen[si]){seen[si].n++;return;}seen[si]={n:1,go:x.go,name:secs()[si].name};out.push(seen[si]);}else out.push(x);});
+  return out.map(x=>x.n?{t:'Checklist, '+x.name+': '+x.n+' line'+(x.n>1?'s':'')+' not answered',go:x.go}:x);
+}
+function missBanner(){
+  if(!S.showMissing)return '';
+  const p=grouped(), total=problems().length;
+  if(!p.length)return '<div class="banner ok">Everything is complete. You can submit.</div>';
+  return `<div class="banner bad"><b>${total} thing${total>1?'s':''} to finish before you can submit</b><ul class="parts" style="margin:6px 0 0;color:var(--fg)">${p.map((x,i)=>`<li>${esc(x.t)} <button class="btn sm" data-act="fix" data-a="${i}">Go to it</button></li>`).join('')}</ul></div>`;
+}
+const tin=(k,l)=>`<label class="fld ${S.showMissing&&!String(S.f[k]??'').trim()?'miss':''}"><span>${l}</span><span class="row"><input data-f="${k}" value="${fv(k)}" style="flex:1"><button type="button" class="btn sm" data-act="na" data-a="${k}" aria-pressed="${S.f[k]==='N/A'}">N/A</button></span></label>`;
+function sDampNotes(){
+  return `<h2>Damp report notes</h2><p class="muted">Customer and vehicle come from the booking.</p>
+  <div class="fields block"><label class="fld"><span>Customer name</span><input value="Sarah Johnson" readonly></label><label class="fld"><span>Make and model</span><input value="${veh().name}" readonly></label><label class="fld"><span>VIN number</span><input value="${fv('vin')}" readonly></label><label class="fld"><span>Job reference</span><input value="MCS-20487" readonly></label></div>
+  <div class="panel"><h3>Guidance notes</h3>${DAMP_BANDS.map(([c,r,t])=>`<div class="chk"><i style="background:var(--b-${c});width:14px;height:14px;border-radius:3px"></i><span><b>${r}</b>: ${t}</span></div>`).join('')}</div>
+  <label class="fld block"><span>Comments and recommendations</span><textarea data-f="dcomm" rows="6" placeholder="Add anything the customer should know about the damp readings">${fv('dcomm')}</textarea></label>
+  ${disc(DAMP_NOTE).replace('Disclaimer','Please note')}`;
+}
+
 const TOOLS=[['window','Window'],['windowsq','Window sq.'],['ac','AC unit'],['acsq','AC sq.'],['fan','Fan'],['toilet','Toilet'],['shower','Shower'],['notest','No test']];
 const HAND=['Gas turned off','Lights turned off','Roof lights latched','Water pump turned off','Windows locked','12V/main power switch turned off','All cupboards closed/latched','Old parts left in vehicle (if suitable)','Exterior lockers locked','Service book stamped','Exterior door locked','Protective coverings removed'];
 const VEH={motorhome:{name:'Swift Bolero 684',type:'Motorhome',form:'Motorhome habitation check'},caravan:{name:'Bailey Pegasus Grande',type:'Touring caravan',form:'Tourer annual service report'}};
 const BANDS=[['green','0 to 15%'],['amber','15 to 20%'],['orange','20 to 30%'],['red','30% and over']];
 
 const NOTES={
+ dampnotes:{t:'Damp report notes',did:'The first page of the damp report: what each reading band means, a box for comments and recommendations, and the Please note paragraph.',i:[['said','The first page of the damp report was missing. It is on the original paperwork.'],['ours','Placed after the drawings so the engineer writes comments once the readings are in. The paper has it first.'],['ask','Where in the flow should it sit? Does the report keep the AWS wording? The paper says motorhome on the caravan page too.']]},
  job:{t:'Job details',did:'The engineer opens an accepted job and starts the inspection. The job moves to In Progress.',i:[
   ['said','Engineers use the platform on an iPad to go through each customer job.'],
   ['ours','The form is picked from the vehicle type on the booking, so the engineer never chooses a template.'],
@@ -382,13 +431,13 @@ const NOTES={
 
 let uid=1;
 function fresh(vehicle){
-  const s={vehicle,step:'job',vis:{job:true},f:{},view:'nearside',tool:null,pending:null,selIcon:null,last:'',sec:0,chk:{},photo:{},tick:{},eicr:'',sig:{},proof:{video:false,photos:0},approved:false,backNote:'',data:{}};
+  const s={vehicle,step:'job',vis:{job:true},f:{},view:'nearside',tool:null,pending:null,selIcon:null,last:'',sec:0,chk:{},photo:{},tick:{},eicr:'',sig:{},proof:{video:false,photos:0},approved:false,backNote:'',showMissing:false,hl:'',data:{}};
   VIEWS.forEach(v=>s.data[v]={pins:[],icons:[]});
   return s;
 }
 let S=fresh('motorhome');
 
-const steps=()=>[['job','Job details'],['details','Vehicle details'],['damp','Damp survey'],['check','Checklist'],...(S.vehicle==='caravan'?[['tyres','Wheels and tyres']]:[]),['final','Finalisation'],['proof','Job proof'],['sign','Sign-off'],['done','Submitted'],['review','MCS check']];
+const steps=()=>[['job','Job details'],['details','Vehicle details'],['damp','Damp survey'],['dampnotes','Damp report notes'],['check','Checklist'],...(S.vehicle==='caravan'?[['tyres','Wheels and tyres']]:[]),['final','Finalisation'],['proof','Job proof'],['sign','Sign-off'],['done','Submitted'],['review','MCS check']];
 const veh=()=>VEH[S.vehicle];
 const band=v=>v>=30?'red':v>20?'orange':v>15?'amber':'green';
 const fv=n=>esc(S.f[n]??'');
@@ -412,7 +461,7 @@ function outline(){
   const o='fill="var(--surface)" stroke="var(--fg)" stroke-width="2.2"';
   const c=S.vehicle==='caravan', v=S.view;
   if(v==='nearside'||v==='offside'){
-    const left=v==='offside';
+    const left=v==='nearside';
     if(c){
       const hitch=left?'<path d="M60 185H12" stroke="var(--fg)" stroke-width="2.5"/>':'<path d="M460 185H508" stroke="var(--fg)" stroke-width="2.5"/>';
       return `<rect x="60" y="55" width="400" height="150" rx="22" ${o}/>${hitch}<circle cx="260" cy="212" r="24" ${o}/>`;
@@ -421,14 +470,14 @@ function outline(){
      ?`<rect x="150" y="55" width="330" height="150" rx="14" ${o}/><path d="M150 100H80Q52 100 44 130L36 205H150Z" ${o}/><circle cx="100" cy="210" r="24" ${o}/><circle cx="400" cy="210" r="24" ${o}/>`
      :`<rect x="40" y="55" width="330" height="150" rx="14" ${o}/><path d="M370 100H440Q468 100 476 130L484 205H370Z" ${o}/><circle cx="120" cy="210" r="24" ${o}/><circle cx="420" cy="210" r="24" ${o}/>`;
   }
-  if(v==='front')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="176" y="58" width="168" height="72" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>`;
-  if(v==='rear')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="190" y="68" width="140" height="120" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>`;
+  if(v==='front')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="176" y="58" width="168" height="72" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>${c?'':'<circle cx="182" cy="172" r="11" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><circle cx="338" cy="172" r="11" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/>'}<text x="118" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">O/S</text><text x="390" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">N/S</text>`;
+  if(v==='rear')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="190" y="68" width="140" height="120" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/><circle cx="174" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><circle cx="346" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><text x="118" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">N/S</text><text x="390" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">O/S</text>`;
   return `<rect x="60" y="45" width="400" height="190" rx="12" ${o}/>`;
 }
 function svgDiagram(){
   const d=S.data[S.view];
   let g=outline();
-  g+=`<text x="16" y="24" font-size="12" font-weight="700" fill="var(--muted)" font-family="Manrope,sans-serif">${S.view.toUpperCase()}${S.vehicle==='caravan'?' (motorhome style drawing)':''}</text>`;
+  g+=`<text x="16" y="24" font-size="12" font-weight="700" fill="var(--muted)" font-family="Manrope,sans-serif">${S.view.toUpperCase()}</text>`;
   d.icons.forEach(i=>{
     const sel=S.selIcon===i.id;
     g+=`<g data-ic="${i.id}" transform="translate(${i.x} ${i.y}) rotate(${i.rot}) scale(${i.s})" style="cursor:pointer">${iconShape(i.type)}${sel?'<rect x="-30" y="-22" width="60" height="44" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/>':''}</g>`;
@@ -456,9 +505,10 @@ function sDetails(){
     <label class="fld"><span>Customer name</span><input value="Sarah Johnson" readonly></label>
     <label class="fld"><span>Make and model</span><input value="${veh().name}" readonly></label>
     ${inp('vin','VIN number','17 characters')}
+    ${S.vehicle==='motorhome'?inp('regno','Registration number','e.g. AB12 CDE'):''}
     ${S.vehicle==='motorhome'?inp('miles','Vehicle mileage','e.g. 48200','number'):''}
     ${inp('jobref','Job reference / date','MCS-20487 / 27 Aug')}
-  </div>`;
+  </div>${S.vehicle==='motorhome'?disc(DISC_DETAILS):''}`;
 }
 function sDamp(){
   const d=S.data[S.view];
@@ -468,8 +518,7 @@ function sDamp(){
   const pv=S.pending?S.pending.val:'';
   const b=pv!==''?band(+pv):null;
   return `<div class="tabs" role="group" aria-label="Vehicle view">${VIEWS.map(v=>`<button data-act="view" data-a="${v}" aria-pressed="${S.view===v}">${v[0].toUpperCase()+v.slice(1)}<i>${S.data[v].pins.length||''}</i></button>`).join('')}</div>
-  <details class="block" style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Meter details (calibration, weather, temperature, make and model)</summary>
-   <div class="fields" style="margin-top:8px">${inp('cal','Calibration check figure','')}${inp('wx','Weather conditions','')}${inp('amb','Ambient temperature','')}${inp('meter','Damp meter make and model','')}</div></details>
+  <div class="panel" style="margin-top:10px"><h3>Damp meter details</h3><div class="fields">${inp('cal','Damp meter calibration check figure','')}${inp('wx','Weather conditions','')}${inp('amb','Ambient temperature','')}${inp('meter','Damp meter make and model','')}<label class="fld"><span>Service technician</span><input value="Tom Mitchell" readonly></label><label class="fld"><span>Date</span><input value="${new Date().toLocaleDateString('en-GB')}" readonly></label></div><p class="sub" style="margin:8px 0 0">Readings are taken at 300mm intervals. Signatures are taken at Sign-off.</p></div>
   <div class="dampgrid">
    <div class="diag">${svgDiagram()}
      <div class="legend">${BANDS.map(([k,l])=>`<span><i style="background:var(--b-${k})"></i>${l} (${cnt(k)})</span>`).join('')}</div>
@@ -481,23 +530,23 @@ function sDamp(){
      <div class="tools">${TOOLS.map(([k,l])=>`<button data-act="tool" data-a="${k}" aria-pressed="${S.tool===k}"><svg viewBox="-30 -20 60 40"><g transform="scale(.8)">${iconShape(k)}</g></svg>${l}</button>`).join('')}</div>
      <h3 style="margin-top:12px">Reading (0 to 99)</h3>
      <div class="readout" style="background:${b?`var(--b-${b})`:'var(--surface)'}"><span>${pv===''?'--':pv}</span><small>${S.pending?(S.pending.idx!=null?'Editing point':'New point'):'No point'}</small></div>
-     <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="key" data-a="${n}">${n}</button>`).join('')}<button data-act="key" data-a="0">0</button><button data-act="del">Del</button><button class="go" data-act="next">Next</button></div>
+     <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="key" data-a="${n}">${n}</button>`).join('')}<button data-act="key" data-a="0">0</button><button data-act="del">Del</button><button class="go" data-act="next">Next</button></div>${S.pending&&S.pending.idx!=null?'<button class="btn sm" data-act="rmpin" style="margin-top:8px;width:100%">Remove this reading</button>':''}
    </div>
   </div>`;
 }
 function secDone(s){return s.lines.filter((_,i)=>S.chk[s.id+i]).length;}
 function sCheck(){
-  const sec=SECTIONS[S.sec];
-  return `<div class="secs" role="group" aria-label="Checklist sections">${SECTIONS.map((s,i)=>`<button data-act="sec" data-a="${i}" aria-pressed="${S.sec===i}">${s.name}<i>${secDone(s)}/${s.lines.length}</i></button>`).join('')}</div>
+  const sec=secs()[S.sec];
+  return `<div class="secs" role="group" aria-label="Checklist sections">${secs().map((s,i)=>`<button data-act="sec" data-a="${i}" aria-pressed="${S.sec===i}">${s.name}<i>${secDone(s)}/${s.lines.length}</i></button>`).join('')}</div>
   <div class="row between"><h2>${sec.name}</h2><button class="btn sm" data-act="passall">Pass all unmarked</button></div>
   ${sec.lines.map((l,i)=>{const k=sec.id+i,v=S.chk[k];
-    return `<div class="line"><span class="lbl">${l}</span><span class="pf" role="group" aria-label="${esc(l)}">${[['P','P'],['F','F'],['N','N/A'],['R','R']].map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
+    return `<div class="line ${S.showMissing&&!v?'miss':''} ${S.hl===k?'hl':''}" data-line="${k}"><span class="lbl">${l}</span><span class="pf" role="group" aria-label="${esc(l)}">${[['P','P'],['F','F'],['N','N/A'],['R','R']].map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
     ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}`;
 }
 function sTyres(){
   const cols=['N/S/F','N/S/R','O/S/F','O/S/R','Spare'];
   const rows=[['age','Tyre age'],['psi','Pressure (PSI or BAR)'],['mm','Tread depth (mm)']];
-  return `<h2>Wheels and tyres</h2><p class="muted">Caravan only.</p>
+  return `<h2>Wheels and tyres</h2><p class="muted">Wheel bolt torque should be re-checked after 30 miles and before every trip.</p>
   <div class="fields block">${inp('torque','Wheel bolt torque setting (Nm)','','number')}${inp('tsig','Signature (name)','')}${inp('tsig2','Double check signature (if possible)','')}</div>
   <div class="block" style="overflow-x:auto"><div class="tyre" style="min-width:520px"><span></span>${cols.map(c=>`<b>${c}</b>`).join('')}
   ${rows.map(([r,l])=>`<b>${l}</b>${cols.map((c,i)=>`<input data-f="ty${r}${i}" value="${fv('ty'+r+i)}" aria-label="${l} ${c}">`).join('')}`).join('')}</div></div>
@@ -507,17 +556,17 @@ function sFinal(){
   const tick=k=>`<label><input type="checkbox" data-tick="${k}" ${S.tick[k]?'checked':''}>${k.replace(/^h:/,'')}</label>`;
   return `<h2>Finalisation</h2>
   <div class="block"><h3>Safety dates</h3><div class="fields">${inp('smoke','Smoke alarm expiry (if visible)','','date')}${inp('co','Carbon monoxide alarm expiry (if visible)','','date')}${inp('ext','Fire extinguisher expiry','','date')}</div></div>
-  <div class="block"><h3>Test results</h3><div class="fields">${inp('bat','Battery rest voltage','')}${inp('chg','Charger voltage','')}${inp('rcd1','RCD test, 1x trip time','')}${inp('rcd5','RCD test, 5x trip time','')}${inp('hose','Gas hose expiry date','','date')}${inp('reg','Regulator age','')}${inp('earth','Earth bond, chassis','')}${inp('cont','Continuity test, gas','')}</div></div>
+  <div class="block"><h3>Test results</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a value, or N/A.</p><div class="fields">${TESTS.map(([k,l])=>tin(k,l)).join('')}</div></div>
   <div class="block"><h3>Hand-over checks</h3><div class="checks">${HAND.map(h=>tick('h:'+h)).join('')}</div></div>
   <div class="block"><h3>EICR offered</h3><div class="seg" role="group" aria-label="EICR offered">${['Yes','No','N/A'].map(v=>`<button data-act="eicr" data-a="${v}" aria-pressed="${S.eicr===v}">${v}</button>`).join('')}</div></div>
   <div class="block"><h3>Service information, additional work and observations</h3><label class="fld"><textarea data-f="obs" rows="3" placeholder="Add anything the customer should know">${fv('obs')}</textarea></label>
-  <div class="checks" style="margin-top:4px"><label><input type="checkbox" data-tick="repaired" ${S.tick.repaired?'checked':''}>Repaired</label></div></div>`;
+  <div class="checks" style="margin-top:4px"><label><input type="checkbox" data-tick="repaired" ${S.tick.repaired?'checked':''}>Repaired</label></div></div>${disc(S.vehicle==='caravan'?DISC_C:DISC_M)}`;
 }
 function stats(){
   const all=VIEWS.flatMap(v=>S.data[v].pins);
   const fails=Object.values(S.chk).filter(v=>v==='F').length;
   const marked=Object.values(S.chk).filter(Boolean).length;
-  const total=SECTIONS.reduce((n,s)=>n+s.lines.length,0);
+  const total=secs().reduce((n,s)=>n+s.lines.length,0);
   return `<div class="sumrow"><div><b>${all.length}</b>damp readings</div><div><b>${all.filter(p=>band(p.v)!=='green').length}</b>above 15%</div><div><b>${marked}/${total}</b>lines marked</div><div><b>${fails}</b>faults</div></div>`;
 }
 function sProof(){
@@ -528,7 +577,7 @@ function sProof(){
   <div class="card"><h3>Photos of the job</h3><p class="muted">${p.photos} added. Add photos to go with the video.</p><button class="btn sm" data-act="ph" style="margin-top:8px">Add a photo</button></div></div>`;
 }
 function sSign(){
-  return `<h2>Sign-off</h2><p class="muted">The engineer signs, then the customer signs at the job. MCS Network adds its signature after checking the job. The report prints all three on every page.</p>${stats()}
+  return `${missBanner()}<h2>Sign-off</h2><p class="muted">The engineer signs, then the customer signs at the job. MCS Network adds its signature after checking the job. The report prints all three on every page.</p>${stats()}
   <div class="fields block"><div><h3>Engineer: Tom Mitchell</h3><canvas class="sigpad" data-sig="tech" aria-label="Engineer signature"></canvas><button class="btn sm" data-act="clr" data-a="tech" style="margin-top:6px">Clear</button></div>
   <div><h3>Customer: Sarah Johnson</h3><canvas class="sigpad" data-sig="cust" aria-label="Customer signature"></canvas><button class="btn sm" data-act="clr" data-a="cust" style="margin-top:6px">Clear</button></div>
   <div><h3>MCS Network sign-off</h3><div class="sigpad" style="display:grid;place-items:center;color:var(--muted);font-size:13px;text-align:center;padding:12px">Signed by MCS after it reviews the job</div><p class="muted" style="margin-top:6px;font-size:12px">Locked until the job is checked</p></div></div>`;
@@ -550,7 +599,7 @@ function freshR(){return {step:'req',vis:{req:true},eng:'Tom Mitchell',src:'asse
 let R=freshR();
 const ST=()=>M==='insp'?S:R;
 const rsteps=()=>[['req','Customer asks'],['build','Engineer quotes'],['quote','Customer accepts'],['plan','Book the repair'],['work','Repair done'],['rev','MCS signs off'],['docs','Paperwork']];
-const ACT={job:'Engineer',details:'Engineer',damp:'Engineer',check:'Engineer',tyres:'Engineer',final:'Engineer',proof:'Engineer',sign:'Engineer',done:'Engineer',review:'MCS admin',req:'Customer',build:'Engineer',quote:'Customer',plan:'Engineer',work:'Engineer',rev:'MCS admin',docs:'Customer'};
+const ACT={dampnotes:'Engineer',job:'Engineer',details:'Engineer',damp:'Engineer',check:'Engineer',tyres:'Engineer',final:'Engineer',proof:'Engineer',sign:'Engineer',done:'Engineer',review:'MCS admin',req:'Customer',build:'Engineer',quote:'Customer',plan:'Engineer',work:'Engineer',rev:'MCS admin',docs:'Customer'};
 const WHO={'Engineer':'Engineer, on an iPad','Customer':'Customer, on the website','MCS admin':'MCS office'};
 const logr=m=>R.log.push(m);
 const qh=l=>Math.round((+l.h||0)*4)/4;
@@ -690,7 +739,7 @@ function rReady(){
   }
   return [true,''];
 }
-const SCREENS={job:sJob,details:sDetails,damp:sDamp,check:sCheck,tyres:sTyres,final:sFinal,proof:sProof,sign:sSign,done:sDone,review:sReview,req:sReq,build:sBuild,quote:sQuote,plan:sPlan,work:sWork,rev:sRev,docs:sDocs};
+const SCREENS={dampnotes:sDampNotes,job:sJob,details:sDetails,damp:sDamp,check:sCheck,tyres:sTyres,final:sFinal,proof:sProof,sign:sSign,done:sDone,review:sReview,req:sReq,build:sBuild,quote:sQuote,plan:sPlan,work:sWork,rev:sRev,docs:sDocs};
 Object.assign(NOTES,{
  review:{t:'MCS checks the inspection',did:'MCS watches the video, checks the documents and signs. The signed report is then emailed to the customer.',i:[
   ['said','Three signatures: engineer, customer, then MCS. Engineers cannot sign a job off themselves.'],
@@ -726,6 +775,10 @@ Object.assign(NOTES,{
   ['ask','Labour split on repairs (we use the inspection fee). Refund after 48 hours. What "refund portion of the labour" means.']]}
 });
 
+NOTES.details.i.push(['said','Add the disclaimer and a registration number box (motorhome).']);
+NOTES.damp.i.push(['said','A reading entered by mistake must be removable. Headlights and tail lights added. Nearside and offside views turned the right way round. The damp meter chart sits on this page.']);
+NOTES.check.i.push(['said','Every line must be answered, N/A allowed, before the form can be submitted. Electrical, bodywork and fire safety lines follow the list Brian sent. The caravan has its own checklist, taken from the paper.'],['ask','The exact order of every section, checked against clear motorhome paperwork.']);
+NOTES.final.i.push(['said','The disclaimer is on this page. Test result boxes need a value or N/A; the safety dates stay optional.'],['ask','Which boxes exactly are mandatory? The caravan disclaimer says motorhome in the Word file: keep it or change it?']);
 function chrome(act,A,label){
   const eng=M==='insp'?'Tom Mitchell':R.eng, init=act==='MCS admin'?'MC':eng.split(' ').map(x=>x[0]).join('');
   const navE=['Dashboard','My Jobs','Diary','Earnings','Documents'], navA=['Jobs to check','Payments','Engineers','Customers','Reports'];
@@ -773,7 +826,7 @@ function render(){
   let mid=`<b>Step ${idx+1} of ${list.length}</b>`, hint='';
   if(M==='rep')hint=rReady()[1];
   const okNext=M==='insp'||rReady()[0];
-  const fwdLabel=M==='insp'?(S.step==='sign'?'Submit for MCS review':S.step==='done'?'Open MCS check':S.step==='check'&&S.sec<SECTIONS.length-1?'Next section':'Next step'):'Next step';
+  const fwdLabel=M==='insp'?(S.step==='sign'?'Submit for MCS review':S.step==='done'?'Open MCS check':S.step==='check'&&S.sec<secs().length-1?'Next section':'Next step'):'Next step';
   $('#foot').innerHTML=`${idx===0?'<span></span>':'<button class="btn" data-act="back">Previous step</button>'}<div class="dmid">${mid}${okNext?'':hint}</div>${last?'<span></span>':`<button class="btn primary" data-act="fwd" ${okNext?'':'disabled'}>${fwdLabel}</button>`}`;
   const n=NOTES[A.step], K={said:['Brian confirmed','ok'],ours:['Our suggestion','info'],ask:['Brian still needs to decide','warn']};
   $('#notes').innerHTML=`<h2>${n.t}</h2><span class="gwho">${WHO[act]}</span><p class="gdid">${n.did}</p>${n.i.filter(i=>i[0]==='ask').map(([t,x])=>`<div class="gi ${K[t][1]}"><b>${K[t][0]}</b><p>${x}</p></div>`).join('')}<details class="gmore"><summary>What is agreed and what we suggest</summary>${n.i.filter(i=>i[0]!=='ask').map(([t,x])=>`<div class="gi ${K[t][1]}"><b>${K[t][0]}</b><p>${x}</p></div>`).join('')}</details>`;
@@ -792,14 +845,15 @@ function renderRules(){
 function keep(){ST().keepScroll=true;}
 function go(k){const A=ST();A.step=k;A.vis[k]=true;if(M==='insp'){S.tool=null;S.pending=null;S.selIcon=null;}render();}
 function move(dir){
+  if(M==='insp'&&S.step==='sign'&&dir>0&&problems().length){S.showMissing=true;render();toast('The form is not complete yet.');return;}
   const A=ST(), list=(M==='insp'?steps():rsteps()).map(s=>s[0]), i=list.indexOf(A.step);
   if(M==='insp'&&S.step==='check'){
-    if(dir>0&&S.sec<SECTIONS.length-1){S.sec++;render();return;}
+    if(dir>0&&S.sec<secs().length-1){S.sec++;render();return;}
     if(dir<0&&S.sec>0){S.sec--;render();return;}
   }
   const j=Math.max(0,Math.min(list.length-1,i+dir));
   go(list[j]);
-  if(M==='insp'&&S.step==='check'&&dir<0)S.sec=SECTIONS.length-1,render();
+  if(M==='insp'&&S.step==='check'&&dir<0)S.sec=secs().length-1,render();
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600);}
 function setVehicle(v){S=fresh(v);render();}
@@ -842,7 +896,7 @@ document.addEventListener('click',e=>{
       keep();render();break;}
     case 'sec':S.sec=+a;render();break;
     case 'chk':S.chk[a]=S.chk[a]===b.dataset.b?'':b.dataset.b;keep();render();break;
-    case 'passall':SECTIONS[S.sec].lines.forEach((_,i)=>{const k=SECTIONS[S.sec].id+i;if(!S.chk[k])S.chk[k]='P';});keep();render();break;
+    case 'passall':secs()[S.sec].lines.forEach((_,i)=>{const k=secs()[S.sec].id+i;if(!S.chk[k])S.chk[k]='P';});keep();render();break;
     case 'photo':S.photo[a]=!S.photo[a];keep();render();break;
     case 'vid':S.proof.video=!S.proof.video;keep();render();break;
     case 'ph':S.proof.photos=Math.min(8,S.proof.photos+1);keep();render();break;
@@ -850,6 +904,9 @@ document.addEventListener('click',e=>{
     case 'clr':delete S.sig[a];render();break;
     case 'reset':restart();break;
     case 'mode':M=a;render();break;
+    case 'rmpin':{const d=S.data[S.view];if(S.pending&&S.pending.idx!=null){d.pins.splice(S.pending.idx,1);S.pending=null;S.last='Reading removed. Tap the drawing for the next point.';}keep();render();break;}
+    case 'na':S.f[a]=S.f[a]==='N/A'?'':'N/A';keep();render();break;
+    case 'fix':{const g=grouped()[+a]?.go;if(!g)break;if(g[1]!=null)S.sec=g[1];S.hl=g[0]==='check'?g[2]:'';go(g[0]);setTimeout(()=>{const e=g[0]==='check'?document.querySelector('[data-line="'+g[2]+'"]'):g[0]==='final'?document.querySelector('[data-f="'+g[2]+'"]'):null;if(e)e.scrollIntoView({block:'center'});},30);break;}
     case 'start':V='flow';M=a;G=false;if(a==='insp'){S=fresh(S.vehicle);}else{R=freshR();}render();window.scrollTo(0,0);break;
     case 'home':V='home';render();window.scrollTo(0,0);break;
     case 'notes':G=!G;render();break;
@@ -861,7 +918,7 @@ document.addEventListener('click',e=>{
     case 'lrm':R.labour.splice(+a,1);keep();render();break;
     case 'rcpt':R.parts[+a].r=!R.parts[+a].r;keep();render();break;
     case 'suggest':{
-      const found=[];SECTIONS.forEach(s=>s.lines.forEach((l,i)=>{if(S.chk[s.id+i]==='F')found.push(l);}));
+      const found=[];secs().forEach(s=>s.lines.forEach((l,i)=>{if(S.chk[s.id+i]==='F')found.push(l);}));
       if(!found.length){toast('No failed lines yet. Mark a line F in the inspection checklist, or add lines by hand.');break;}
       found.forEach(l=>{const d='Fix: '+l;if(!R.labour.some(x=>x.d===d))R.labour.push({d,h:''});});
       keep();render();break;}

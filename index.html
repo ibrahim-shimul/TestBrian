@@ -377,8 +377,8 @@ function missBanner(){
 }
 const tin=(k,l)=>`<label class="fld ${S.showMissing&&!String(S.f[k]??'').trim()?'miss':''}"><span>${l}</span><span class="row"><input data-f="${k}" value="${fv(k)}" style="flex:1"><button type="button" class="btn sm" data-act="na" data-a="${k}" aria-pressed="${S.f[k]==='N/A'}">N/A</button></span></label>`;
 function sDampNotes(){
-  return `<h2>Damp report notes</h2><p class="muted">Customer and vehicle come from the booking.</p>
-  <div class="fields block"><label class="fld"><span>Customer name</span><input value="Sarah Johnson" readonly></label><label class="fld"><span>Make and model</span><input value="${veh().name}" readonly></label><label class="fld"><span>VIN number</span><input value="${fv('vin')}" readonly></label><label class="fld"><span>Job reference</span><input value="MCS-20487" readonly></label></div>
+  return `<h2>Damp report notes</h2><p class="muted">${veh().name} &middot; Sarah Johnson &middot; MCS-20487</p>
+  
   <div class="panel"><h3>Guidance notes</h3>${DAMP_BANDS.map(([c,r,t])=>`<div class="chk"><i style="background:var(--b-${c});width:14px;height:14px;border-radius:3px"></i><span><b>${r}</b>: ${t}</span></div>`).join('')}</div>
   <label class="fld block"><span>Comments and recommendations</span><textarea data-f="dcomm" rows="6" placeholder="Add anything the customer should know about the damp readings">${fv('dcomm')}</textarea></label>
   ${disc(DAMP_NOTE).replace('Disclaimer','Please note')}`;
@@ -518,7 +518,7 @@ function sDamp(){
   const pv=S.pending?S.pending.val:'';
   const b=pv!==''?band(+pv):null;
   return `<div class="tabs" role="group" aria-label="Vehicle view">${VIEWS.map(v=>`<button data-act="view" data-a="${v}" aria-pressed="${S.view===v}">${v[0].toUpperCase()+v.slice(1)}<i>${S.data[v].pins.length||''}</i></button>`).join('')}</div>
-  <div class="panel" style="margin-top:10px"><h3>Damp meter details</h3><div class="fields">${inp('cal','Damp meter calibration check figure','')}${inp('wx','Weather conditions','')}${inp('amb','Ambient temperature','')}${inp('meter','Damp meter make and model','')}<label class="fld"><span>Service technician</span><input value="Tom Mitchell" readonly></label><label class="fld"><span>Date</span><input value="${new Date().toLocaleDateString('en-GB')}" readonly></label></div><p class="sub" style="margin:8px 0 0">Readings are taken at 300mm intervals. Signatures are taken at Sign-off.</p></div>
+  
   <div class="dampgrid">
    <div class="diag">${svgDiagram()}
      <div class="legend">${BANDS.map(([k,l])=>`<span><i style="background:var(--b-${k})"></i>${l} (${cnt(k)})</span>`).join('')}</div>
@@ -532,7 +532,8 @@ function sDamp(){
      <div class="readout" style="background:${b?`var(--b-${b})`:'var(--surface)'}"><span>${pv===''?'--':pv}</span><small>${S.pending?(S.pending.idx!=null?'Editing point':'New point'):'No point'}</small></div>
      <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="key" data-a="${n}">${n}</button>`).join('')}<button data-act="key" data-a="0">0</button><button data-act="del">Del</button><button class="go" data-act="next">Next</button></div>${S.pending&&S.pending.idx!=null?'<button class="btn sm" data-act="rmpin" style="margin-top:8px;width:100%">Remove this reading</button>':''}
    </div>
-  </div>`;
+  </div>
+  <div class="panel" style="margin-top:14px"><h3>Damp meter details</h3><div class="fields">${inp('cal','Damp meter calibration check figure','')}${inp('wx','Weather conditions','')}${inp('amb','Ambient temperature','')}${inp('meter','Damp meter make and model','')}<label class="fld"><span>Service technician</span><input value="Tom Mitchell" readonly></label><label class="fld"><span>Date</span><input value="${new Date().toLocaleDateString('en-GB')}" readonly></label></div><p class="sub" style="margin:8px 0 0">Readings are taken at 300mm intervals. Signatures are taken at Sign-off.</p></div>`;
 }
 function secDone(s){return s.lines.filter((_,i)=>S.chk[s.id+i]).length;}
 function sCheck(){
@@ -798,8 +799,7 @@ function homeHtml(){
   <section class="hsec"><h3>Who uses it</h3><dl class="who"><dt>Customer</dt><dd>Books on the website and gets a quote or report by email. No account, no login.</dd><dt>Engineer</dt><dd>Works on an iPad: jobs, the inspection checklist, quotes, diary and earnings.</dd><dt>MCS office</dt><dd>Checks the proof, signs the job off, and pays engineers by bank transfer. Admin works but is not designed in Figma.</dd></dl></section>
   <section class="hsec"><h3>The two parts</h3><div class="two"><div><h4>Part 1: inspection</h4><ol>${li(['Engineer opens the job and starts the inspection','Vehicle details, damp survey, checklist, final checks','Video or photos uploaded as proof','Engineer and customer sign','MCS checks and signs; the report is emailed to the customer'])}</ol></div><div><h4>Part 2: repair quote</h4><ol>${li(['Customer asks for a repair and pays a call-out charge, or the engineer finds a fault during a service','Engineer builds the quote on site or later','Customer accepts and pays, or declines','Engineer books the repair into the diary','Engineer uploads proof; MCS signs off','Quote and invoice kept for the customer'])}</ol></div></div></section>
   <section class="hsec"><h3>Agreed with Brian</h3><div class="two"><div><h4>Booking and diary</h4><ul>${li(['24 hours minimum notice, no maximum','Up to 5 jobs a day, with a travel buffer the engineer sets','3 hours per job to start with','Engineer accepts or declines within 24 hours','Cancel through the contact form; reschedule needs 48 hours; full refund only within 48 hours of booking'])}</ul></div><div><h4>Checking and money</h4><ul>${li(['Three signatures: engineer, customer, then MCS','Customer pays 100% upfront into MCS; engineers are not paid in the platform','Engineer requests payment with an invoice; MCS pays by bank transfer','MCS fee: 15% for the first four engineers, 20% after, set per engineer','Repairs: 25% markup on part cost only, labour at 80 pounds an hour, quote valid 30 days','Engineer earns 10% of part cost, held until MCS signs off'])}</ul></div></div></section>
-  <section class="hsec"><h3>Still to decide</h3><ul class="open">${li(['Call-out charge: the amount, and whether it comes off the repair price','VAT: charged or not, and on what (parts at customer price, cost only, or labour too)','Whether the customer pays by card on accepting a quote','What happens to an open job if no engineer accepts','Whether MCS sends a failed job back, and whether an engineer can edit a report after submitting','Quote terms text and the booking email wording'])}</ul></section>
-  <section class="hsec"><h3>How to use it</h3><p style="margin:0">Pick a part and click through. Each screen is what that person would see. Use Show notes for what Brian said and what is open on the current step. Use Try different answers to change an open point and watch the money change.</p></section>`;
+  <section class="hsec"><h3>Still to decide</h3><ul class="open">${li(['Call-out charge: the amount, and whether it comes off the repair price','VAT: charged or not, and on what (parts at customer price, cost only, or labour too)','Whether the customer pays by card on accepting a quote','What happens to an open job if no engineer accepts','Whether MCS sends a failed job back, and whether an engineer can edit a report after submitting','Quote terms text and the booking email wording'])}</ul></section>`;
 }
 function render(){
   $('#home').hidden=V!=='home';$('#flow').hidden=V!=='flow';

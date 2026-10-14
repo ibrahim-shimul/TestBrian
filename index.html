@@ -164,6 +164,8 @@ svg.diagram{width:100%;height:auto;display:block;background:var(--surface2);bord
 .doc{border:1.5px solid var(--fg);border-radius:6px;padding:14px;background:var(--surface)}
 @media (max-width:640px){.lnrow{grid-template-columns:1fr 1fr}}
 /* ---- walkthrough shell v2 ---- */
+.hdrstrip{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:12.5px;color:var(--muted);padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);margin-bottom:12px}.hdrstrip b{color:var(--fg);font-weight:700;margin-right:4px}
+.checks label.miss{background:var(--bad-bg);border-radius:6px}.block.miss{background:var(--bad-bg);border-radius:8px;padding:6px 8px}
 .line.miss,.fld.miss input{background:var(--bad-bg)}.line.miss{border-radius:8px;padding-inline:8px}.line.hl{outline:2px solid var(--accent);border-radius:8px}
 .disc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface2);font-size:12.5px;margin-top:12px}.disc b{display:block;margin-bottom:2px}.disc p{margin:0}
 .btn[aria-pressed="true"]{background:var(--fg);color:var(--surface)}
@@ -331,36 +333,43 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const VIEWS=['front','rear','nearside','offside','ceiling','floor'];
 const SEC_M=[
- {id:'under',name:'Underbody',lines:['Corner steadies (where applicable)','Folding steps (where applicable)','Under-slung tanks and pipes']},
- {id:'elec',name:'Electrical system',lines:['Leisure battery (if fitted)','230V and 12V fridge operation','Interior lighting and equipment','Awning light','Wiring on ELV circuits (visual)','LV inlet plug and extension','Check fuse box and rating','Earth bonding continuity test','230V consumer unit load test RCD','230V sockets','Electric awning (if fitted)','Check operation of 230V appliances, fans and luminaires','Check any aftermarket items','Charge voltage']},
- {id:'gas',name:'LPG gas systems',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Check security of LPG tank (if fitted)','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear','Appliances: check operation including FFDs']},
- {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet']},
- {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Body attachments: check security (including ladders, cycle rack, lockers, aerials, satellite dishes)','Floor','Furniture','Blinds and fly screens']},
- {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights','Damp test: note reading on the damp survey']},
- {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing']}
+ {id:'under',name:'Underbody',lines:['Corner steadies (where applicable)','Folding steps (where applicable)','Under slung tanks and pipes']},
+ {id:'elec',name:'Electrical system',lines:['230V and 12V fridge operation','Leisure battery (if fitted)','Interior lighting and equipment','Check fuse box and rating','Awning light','Wiring on ELV circuits (visual)','LV inlet plug and extension','Earth bonding continuity test','230V consumer unit load test RCD','230V sockets','Electric awning (if fitted)','Check operation of 230V appliances, fans and luminaires','Check any aftermarket items','Charge voltage']},
+ {id:'gas',name:'LPG gas systems',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Check security of LPG tank (if fitted)','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear','Appliances: check operation of all gas appliances fitted including FFDs']},
+ {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet','@yn:No test due to frost']},
+ {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Body attachments: check security (including ladders, cycle racks, lockers, aerials, satellite dishes etc)','Floor','Furniture','Blinds and fly screens','Damp test: carry out and note reading on the separate damp report sheet']},
+ {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights']},
+ {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing (see below)','Smoke and/or carbon monoxide alarm(s) if fitted']}
 ];
 const SEC_C=[
  {id:'chas',name:'Chassis and running gear',lines:['Coupling head','Ball acting stabiliser','Coupling head gaiter','Breakaway cable and slip','Drawbar','Corner steadies','Spare wheel carrier (if fitted)','Jockey wheel','Chassis','Braking system','Wheels and tyres','Suspension and axle','Handbrake mechanism']},
  {id:'elec',name:'Electrical system',lines:['13pin/7pin plugs, cables and storage position','Road lights and reflectors','Leisure battery (if fitted)','Battery compartment','230V and 12V fridge operation','Interior lighting and equipment','Awning light','Wiring on ELV circuits (visual)','LV inlet plug and extension lead','Earth bonding continuity test','230V consumer unit load test RCD','230V sockets','Charge voltage','Check operation of all 230V appliances, fans and luminaires','Check all aftermarket items']},
  {id:'gas',name:'LPG gas system',lines:['Regulator, gas hose, pipework and manifold','Carry out gas tightness check','Appliances: check operation of all gas appliances fitted including FFDs','Security of gas cylinder(s)','Ensure all gas dispersal vents are clear']},
- {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet']},
- {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Roof straps (if applicable)','Grab handles','Number plate: check it is marked BS AU 145d and check security and legibility','Floor','Furniture','Blinds and fly screens','Rising roof (if applicable)']},
- {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights','Damp test: carry out and note reading on the damp report sheet']},
- {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing']}
+ {id:'water',name:'Water system',lines:['Water pump and pressure switch/microswitches','Taps, valves, pipes and tank (if fitted)','Water inlets','Waste system','Toilet','@yn:No test due to frost']},
+ {id:'body',name:'Bodywork',lines:['Doors and windows','General condition of bodywork including roof','External seals and bonded joints condition','Roof straps (if applicable)','Grab handles','Number plate: check it is marked BS AU 145d or BS Au 145 (mandatory since 1973) and check security and legibility','Floor','Furniture','Blinds and fly screens','Rising roof (if applicable)','Charge voltage','Damp test: carry out and note reading on the separate damp report sheet']},
+ {id:'vent',name:'Ventilation',lines:['Fixed ventilation (low and high levels)','Roof lights']},
+ {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing (see below)','Smoke and/or carbon monoxide alarm(s) if fitted']}
 ];
 const secs=()=>S.vehicle==='caravan'?SEC_C:SEC_M;
-const TESTS_M=[['bat','Battery rest voltage'],['chg','Charger voltage'],['rcd1','RCD test, 1x trip time'],['rcd5','RCD test, 5x trip time'],['hose','Gas hose expiry date'],['reg','Regulator age'],['earth','Earth bond, chassis'],['cont','Continuity test, gas']];
-const TESTS_C=[['bat','Battery rest voltage'],['rcd1','RCD test, 1x trip time'],['rcd5','RCD test, 5x trip time'],['earth','Earth bond, chassis'],['cont','Continuity test, gas'],['chg','Charger voltage'],['hose','Gas hose expiry date'],['reg','Regulator age']];
-const tests=()=>S.vehicle==='caravan'?TESTS_C:TESTS_M;
+const TESTS=[['bat','Battery rest voltage'],['rcd1','RCD test, 1xΔn'],['rcd5','RCD times, 5xΔn'],['earth','Earth bond, chassis Ω'],['cont','Continuity test, gas Ω'],['chg','Charger voltage'],['hose','Gas hose expiry date'],['reg','Regulator age']];
+const tests=()=>TESTS;
+const DATES=[['smoke','Smoke alarm expiry date (if visible)'],['co','Carbon monoxide alarm expiry date (if visible)'],['ext','Fire extinguisher expiry date']];
+const OLDPARTS='Old parts left in vehicle (if suitable)';
 const DISC_DETAILS='IMPORTANT: All appliances are tested for operation only. This does not confirm that they are working to the prescribed standard. Additional servicing may be required for warranty purposes/products (e.g. fridge).';
 const DISC_M='This service report only relates to the condition of the above mentioned motorhome at the time of completion of the service. It should not be regarded as evidence of the condition of the items at any other time. Important: Appliances are checked for operation only, additional servicing may be required for warranty purposes. The habitation service does not include any servicing of the base vehicle and road legal requirements.';
 const DISC_C='This service report only relates to the condition of the above mentioned motorhome at the time of completion of the service. It should not be regarded as evidence of the condition of the items at any other time. Important: Appliances are checked for operation only, additional servicing may be required for warranty purposes.';
 const DAMP_BANDS=[['green','0 to 15%','No cause for concern. Only readings of over 15% are recorded.'],['amber','15 to 20%','May require further investigation. Compare with average readings and consider a recheck after 3 months.'],['orange','20 to 30%','Will require further investigation to look for other possible indications of water ingress. Possible resealing required to avoid further degrading.'],['red','30% and above','May indicate that structural damage or deterioration is occurring. Possible resealing required to avoid further degrading, followed by immediate rectification action as necessary.']];
 const DAMP_NOTE='We would emphasise that the above report accurately reflects the condition of your motorhome at the date stated. These readings may be subject to atmospheric conditions and the company cannot accept any liability for damp, which may become apparent at a future date. Completed in line with the latest AWS Damp Testing Matrix and carried out in accordance with the latest AWS service technician\'s handbook and manufacturers guidance in relation to areas required to tests. Only the inside of the habitation unit is tested. Personal belongings will not be removed from lockers and storage areas, which therefore, may limit the scope of the damp report.';
 const disc=t=>`<div class="disc"><b>Disclaimer</b><p>${t}</p></div>`;
+const isYN=l=>l.startsWith('@yn:');
+const hdr=()=>`<div class="hdrstrip"><span><b>Customer</b> Sarah Johnson</span><span><b>Make and model</b> ${veh().name}</span><span><b>VIN</b> ${S.f.vin?esc(S.f.vin):'not entered yet'}</span>${S.vehicle==='motorhome'&&S.f.miles?`<span><b>Mileage</b> ${esc(S.f.miles)}</span>`:''}<span><b>Job</b> ${esc(S.f.jobref||'MCS-20487')}</span></div>`;
+const dtin=(k,l)=>{const na=S.f[k]==='N/A';return `<label class="fld ${S.showMissing&&!String(S.f[k]??'').trim()?'miss':''}"><span>${l}</span><span class="row"><input type="date" data-f="${k}" value="${na?'':fv(k)}" ${na?'disabled':''} style="flex:1"><button type="button" class="btn sm" data-act="na" data-a="${k}" aria-pressed="${na}">N/A</button></span></label>`;};
 function problems(){
-  const p=[];
-  secs().forEach((sc,si)=>sc.lines.forEach((l,i)=>{const k=sc.id+i;if(!S.chk[k])p.push({t:sc.name+': '+l,go:['check',si,k]});}));
+  const p=[], fi=secs().length-1;
+  secs().forEach((sc,si)=>sc.lines.forEach((l,i)=>{const k=sc.id+i;if(!S.chk[k])p.push({t:sc.name+': '+(isYN(l)?l.slice(4):l),go:['check',si,k]});}));
+  DATES.forEach(([k,l])=>{if(!String(S.f[k]??'').trim())p.push({t:'Fire safety: '+l,go:['check',fi,k]});});
+  if(!S.eicr)p.push({t:'EICR offered: choose Yes, No or N/A',go:['final',null,'eicr']});
+  HAND.forEach(h=>{const k='h:'+h;if(!S.tick[k]&&!(h===OLDPARTS&&S.f.hna==='N/A'))p.push({t:'Hand-over: '+h,go:['final',null,k]});});
   tests().forEach(([k,l])=>{if(!String(S.f[k]??'').trim())p.push({t:'Test result: '+l,go:['final',null,k]});});
   if(!(S.proof.video||S.proof.photos>0))p.push({t:'Job proof: add a video or photos',go:['proof']});
   if(!S.sig.tech||!S.sig.cust)p.push({t:'Engineer and customer signatures',go:['sign']});
@@ -368,8 +377,14 @@ function problems(){
 }
 function grouped(){
   const out=[],seen={};
-  problems().forEach(x=>{if(x.go[0]==='check'){const si=x.go[1];if(seen[si]){seen[si].n++;return;}seen[si]={n:1,go:x.go,name:secs()[si].name};out.push(seen[si]);}else out.push(x);});
-  return out.map(x=>x.n?{t:'Checklist, '+x.name+': '+x.n+' line'+(x.n>1?'s':'')+' not answered',go:x.go}:x);
+  const add=(key,x,label)=>{if(seen[key]){seen[key].n++;return;}seen[key]={n:1,go:x.go,label};out.push(seen[key]);};
+  problems().forEach(x=>{
+    if(x.go[0]==='check')add('c'+x.go[1],x,'Checklist, '+secs()[x.go[1]].name);
+    else if(x.t.startsWith('Hand-over: '))add('h',x,'Hand-over checks');
+    else if(x.t.startsWith('Test result: '))add('t',x,'Test readings');
+    else out.push(x);
+  });
+  return out.map(x=>x.n?{t:x.label+': '+x.n+' not done',go:x.go}:x);
 }
 function missBanner(){
   if(!S.showMissing)return '';
@@ -379,7 +394,7 @@ function missBanner(){
 }
 const tin=(k,l)=>`<label class="fld ${S.showMissing&&!String(S.f[k]??'').trim()?'miss':''}"><span>${l}</span><span class="row"><input data-f="${k}" value="${fv(k)}" style="flex:1"><button type="button" class="btn sm" data-act="na" data-a="${k}" aria-pressed="${S.f[k]==='N/A'}">N/A</button></span></label>`;
 function sDampNotes(){
-  return `<h2>Damp report notes</h2><p class="muted">${veh().name} &middot; Sarah Johnson &middot; MCS-20487</p>
+  return `${hdr()}<h2>Damp report notes</h2><p class="muted">Sheet 3 of 4</p>
   
   <div class="panel"><h3>Guidance notes</h3>${DAMP_BANDS.map(([c,r,t])=>`<div class="chk"><i style="background:var(--b-${c});width:14px;height:14px;border-radius:3px"></i><span><b>${r}</b>: ${t}</span></div>`).join('')}</div>
   <label class="fld block"><span>Comments and recommendations</span><textarea data-f="dcomm" rows="6" placeholder="Add anything the customer should know about the damp readings">${fv('dcomm')}</textarea></label>
@@ -429,13 +444,13 @@ const NOTES={
 
 let uid=1;
 function fresh(vehicle){
-  const s={vehicle,step:'job',vis:{job:true},f:{},view:'nearside',tool:null,pending:null,selIcon:null,last:'',sec:0,chk:{},photo:{},tick:{},eicr:'',sig:{},proof:{video:false,photos:0},approved:false,backNote:'',showMissing:false,hl:'',obs:[{t:'',r:false}],data:{}};
+  const s={vehicle,service:vehicle==='caravan'?'Caravan servicing':'Habitation check (motorhome)',step:'job',vis:{job:true},f:{},view:'nearside',tool:null,pending:null,selIcon:null,last:'',sec:0,chk:{},photo:{},tick:{},eicr:'',sig:{},proof:{video:false,photos:0},approved:false,backNote:'',showMissing:false,hl:'',obs:[{t:'',r:false}],data:{}};
   VIEWS.forEach(v=>s.data[v]={pins:[],icons:[]});
   return s;
 }
 let S=fresh('motorhome');
 
-const steps=()=>[['job','Job details'],['details','Vehicle details'],['damp','Damp survey'],['dampnotes','Damp report notes'],['check','Checklist'],['final','Finalisation'],['proof','Job proof'],['sign','Sign-off'],['done','Submitted'],['review','MCS check']];
+const steps=()=>[['job','Job details'],['details','Vehicle details'],['check','Checklist'],['final','Finalisation'],['dampnotes','Damp report notes'],['damp','Damp survey'],['proof','Job proof'],['sign','Sign-off'],['done','Submitted'],['review','MCS check']];
 const veh=()=>VEH[S.vehicle];
 const band=v=>v>=30?'red':v>20?'orange':v>15?'amber':'green';
 const fv=n=>esc(S.f[n]??'');
@@ -465,12 +480,12 @@ function outline(){
       return `<rect x="60" y="55" width="400" height="150" rx="22" ${o}/>${hitch}<circle cx="260" cy="212" r="24" ${o}/>`;
     }
     return left
-     ?`<rect x="150" y="55" width="330" height="150" rx="14" ${o}/><path d="M150 100H80Q52 100 44 130L36 205H150Z" ${o}/><circle cx="100" cy="210" r="24" ${o}/><circle cx="400" cy="210" r="24" ${o}/>`
-     :`<rect x="40" y="55" width="330" height="150" rx="14" ${o}/><path d="M370 100H440Q468 100 476 130L484 205H370Z" ${o}/><circle cx="120" cy="210" r="24" ${o}/><circle cx="420" cy="210" r="24" ${o}/>`;
+     ?`<rect x="150" y="55" width="330" height="150" rx="14" ${o}/><path d="M150 48H92L58 116L36 130V205H150Z" ${o}/><circle cx="100" cy="210" r="24" ${o}/><circle cx="400" cy="210" r="24" ${o}/>`
+     :`<rect x="40" y="55" width="330" height="150" rx="14" ${o}/><path d="M370 48H428L462 116L484 130V205H370Z" ${o}/><circle cx="120" cy="210" r="24" ${o}/><circle cx="420" cy="210" r="24" ${o}/>`;
   }
   if(v==='front')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="176" y="58" width="168" height="72" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/>${c?'':'<circle cx="182" cy="172" r="11" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><circle cx="338" cy="172" r="11" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/>'}<text x="118" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">O/S</text><text x="390" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">N/S</text>`;
-  if(v==='rear')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/><rect x="190" y="68" width="140" height="120" rx="6" ${o}/><rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/><circle cx="174" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><circle cx="346" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><text x="118" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">N/S</text><text x="390" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">O/S</text>`;
-  return `<rect x="60" y="45" width="400" height="190" rx="12" ${o}/>`;
+  if(v==='rear')return `<rect x="150" y="35" width="220" height="185" rx="18" ${o}/>${c?`<rect x="190" y="68" width="140" height="120" rx="6" ${o}/>`:`<path d="M150 72H370" stroke="var(--fg)" stroke-width="2.2"/>`}<rect x="162" y="205" width="32" height="26" ${o}/><rect x="326" y="205" width="32" height="26" ${o}/><circle cx="174" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><circle cx="346" cy="170" r="9" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><text x="118" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">N/S</text><text x="390" y="130" font-size="13" font-weight="800" fill="var(--muted)" font-family="Manrope,sans-serif">O/S</text>`;
+  return `<rect x="60" y="45" width="400" height="190" rx="12" ${o}/>${c?`<path d="M60 120H30V170H60" fill="none" stroke="var(--fg)" stroke-width="2.4"/><text x="6" y="188" font-size="11" font-weight="700" fill="var(--muted)" font-family="Manrope,sans-serif">Hitch</text>`:''}`;
 }
 function svgDiagram(){
   const d=S.data[S.view];
@@ -487,14 +502,16 @@ function svgDiagram(){
   return `<svg class="diagram" viewBox="0 0 520 260" role="img" aria-label="${S.view} view. Tap to place a reading or an icon.">${g}</svg>`;
 }
 
+const SERVICES=['Habitation check (motorhome)','Caravan servicing','Gas safety check','Electrical check','Water and damp check'];
 function sJob(){
-  const parts=['Vehicle details','Damp survey on six vehicle views','Checklist in seven sections','Finalisation and test results','Job proof: video or photos','Sign-off'];
-  return `<div class="row between"><h2>Habitation Check: ${veh().name}</h2></div>
+  const parts=['Vehicle details','Sheet 1: checklist','Sheet 2: finalisation','Sheet 3: damp report notes','Sheet 4: damp survey','Job proof: video or photos','Sign-off'];
+  return `<div class="row between"><h2>${esc(S.service)}: ${veh().name}</h2></div>
   <div class="grid2">
     <div class="card"><h3>Customer</h3><p><b>Sarah Johnson</b><br>12 Ash Grove, Bradford</p><p class="muted">Wed 27 Aug, 10:00</p></div>
     <div class="card"><h3>Vehicle</h3><p><b>${veh().name}</b><br>${veh().type}</p><p class="muted">From the booking</p></div>
   </div>
-  <div class="card"><h3>Inspection form</h3><p>Picked from the booking: <b>${veh().form}</b></p><ul class="parts">${parts.map(p=>`<li>${p}</li>`).join('')}</ul>
+  <div class="card"><h3>Service booked</h3><label class="fld"><span>Service</span><select class="inp" data-svc aria-label="Service booked">${SERVICES.map(v=>`<option ${v===S.service?'selected':''}>${v}</option>`).join('')}</select></label><p class="muted" style="font-size:12.5px;margin:8px 0 0">Gas safety, electrical and water and damp checks use the same form. The vehicle decides which one opens.</p></div>
+  <div class="card" style="margin-top:12px"><h3>Inspection form</h3><p>Opens for this vehicle: <b>${veh().form}</b></p><ul class="parts">${parts.map(p=>`<li>${p}</li>`).join('')}</ul>
   <button class="btn primary" data-act="go" data-a="details">Start inspection</button></div>`;
 }
 function sDetails(){
@@ -515,7 +532,7 @@ function sDamp(){
   const cnt=k=>all.filter(p=>band(p.v)===k).length;
   const pv=S.pending?S.pending.val:'';
   const b=pv!==''?band(+pv):null;
-  return `<div class="tabs" role="group" aria-label="Vehicle view">${VIEWS.map(v=>`<button data-act="view" data-a="${v}" aria-pressed="${S.view===v}">${v[0].toUpperCase()+v.slice(1)}<i>${S.data[v].pins.length||''}</i></button>`).join('')}</div>
+  return `${hdr()}<div class="tabs" role="group" aria-label="Vehicle view">${VIEWS.map(v=>`<button data-act="view" data-a="${v}" aria-pressed="${S.view===v}">${v[0].toUpperCase()+v.slice(1)}<i>${S.data[v].pins.length||''}</i></button>`).join('')}</div>
   
   <div class="dampgrid">
    <div class="diag">${svgDiagram()}
@@ -536,15 +553,15 @@ function sDamp(){
 function secDone(s){return s.lines.filter((_,i)=>S.chk[s.id+i]).length;}
 function sCheck(){
   const sec=secs()[S.sec];
-  return `<div class="secs" role="group" aria-label="Checklist sections">${secs().map((s,i)=>`<button data-act="sec" data-a="${i}" aria-pressed="${S.sec===i}">${s.name}<i>${secDone(s)}/${s.lines.length}</i></button>`).join('')}</div>
+  return `${hdr()}<div class="secs" role="group" aria-label="Checklist sections">${secs().map((s,i)=>`<button data-act="sec" data-a="${i}" aria-pressed="${S.sec===i}">${s.name}<i>${secDone(s)}/${s.lines.length}</i></button>`).join('')}</div>
   <div class="row between"><h2>${sec.name}</h2><button class="btn sm" data-act="passall">Pass all unmarked</button></div>
-  ${sec.lines.map((l,i)=>{const k=sec.id+i,v=S.chk[k];
-    return `<div class="line ${S.showMissing&&!v?'miss':''} ${S.hl===k?'hl':''}" data-line="${k}"><span class="lbl">${l}</span><span class="pf" role="group" aria-label="${esc(l)}">${[['P','P'],['F','F'],['N','N/A'],['R','R']].map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
-    ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}${sec.id==='fire'&&S.vehicle==='caravan'?safetyDates():''}`;
+  ${sec.lines.map((l,i)=>{const k=sec.id+i,v=S.chk[k],yn=isYN(l),lab=yn?l.slice(4):l,opts=yn?[['Y','Yes'],['N','No']]:[['P','P'],['F','F'],['N','N/A'],['R','R']];
+    return `<div class="line ${S.showMissing&&!v?'miss':''} ${S.hl===k?'hl':''}" data-line="${k}"><span class="lbl">${lab}</span><span class="pf" role="group" aria-label="${esc(lab)}">${opts.map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
+    ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}${sec.id==='fire'?datesBlock():''}`;
 }
-function safetyDates(){return `<div class="block"><h3>Alarm and extinguisher dates</h3><div class="fields">${inp('smoke','Smoke alarm expiry date (if visible)','','date')}${inp('co','Carbon monoxide alarm expiry date (if visible)','','date')}${inp('ext','Fire extinguisher expiry date','','date')}</div></div>`;}
+function datesBlock(){return `<div class="block"><h3>Alarm and extinguisher dates</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a date, or N/A when it is not visible or not fitted.</p><div class="fields">${DATES.map(([k,l])=>dtin(k,l)).join('')}</div></div>`;}
 function obsBlock(){
-  return `<div class="block"><h3>Service information, additional work and observations</h3>${S.obs.map((o,i)=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 34px;gap:8px;align-items:center;margin-bottom:8px"><input class="inp" aria-label="Observation ${i+1}" data-ob="${i}:t" value="${esc(o.t)}" placeholder="What was found or done"><label class="row" style="gap:6px"><input type="checkbox" data-ob="${i}:r" ${o.r?'checked':''}>Repaired</label><button class="x" aria-label="Remove line" data-act="obsrm" data-a="${i}">${IN}</button></div>`).join('')}<button class="btn sm" data-act="obsadd">Add a line</button></div>`;
+  return `<div class="block"><h3>Service information, additional work and observations</h3>${S.obs.map((o,i)=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 34px;gap:8px;align-items:center;margin-bottom:8px"><input class="inp" aria-label="Observation ${i+1}" data-ob="${i}:t" value="${esc(o.t)}" placeholder="What was found or done"><label class="row" style="gap:6px"><input type="checkbox" data-ob="${i}:r" ${o.r?'checked':''}>Repaired</label><button class="x" aria-label="Remove line" data-act="obsrm" data-a="${i}">${IN}</button></div>`).join('')}${S.obs.length<10?`<button class="btn sm" data-act="obsadd">Add a line (${S.obs.length} of 10)</button>`:'<p class="muted" style="font-size:12px">10 lines, as on the paper form.</p>'}</div>`;
 }
 function torqueTyres(){
   const cols=['N/S/F','N/S/R','O/S/F','O/S/R','Spare'];
@@ -552,17 +569,16 @@ function torqueTyres(){
   return `<div class="block"><h3>Wheel bolt torque</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Re-check after 30 miles and before every trip.</p><div class="fields">${inp('torque','Torque setting (Nm)','','number')}${inp('tsig','Signature','')}${inp('tname','Name','')}${inp('tsig2','Double check signature (if possible)','')}${inp('tname2','Name','')}</div></div>
   <div class="block"><h3>Tyres</h3><div style="overflow-x:auto"><div class="tyre" style="min-width:520px"><span></span>${cols.map(c=>`<b>${c}</b>`).join('')}
   ${rows.map(([r,l])=>`<b>${l}</b>${cols.map((c,i)=>`<input data-f="ty${r}${i}" value="${fv('ty'+r+i)}" aria-label="${l} ${c}">`).join('')}`).join('')}</div></div>
-  <p class="muted" style="font-size:12px;margin:6px 0 0">Recommended replacement if over 5 years old, and never use beyond 7 years old.</p></div>`;
+  <p class="muted" style="font-size:12px;margin:6px 0 0">Recommended replacement if over 5 years old, and never use beyond 7 years old. Rear columns apply to twin-axle tourers.</p></div>`;
 }
 function techLine(){return `<p class="muted" style="font-size:12px">Service technician: Tom Mitchell &middot; ${new Date().toLocaleDateString('en-GB')}. Engineer and customer signatures are taken at Sign-off.</p>`;}
 function sFinal(){
   const car=S.vehicle==='caravan';
-  const tick=k=>`<label><input type="checkbox" data-tick="${k}" ${S.tick[k]?'checked':''}>${k.replace(/^h:/,'')}</label>`;
-  const hand=`<div class="block"><h3>Hand-over checks</h3><div class="checks">${HAND.map(h=>tick('h:'+h)).join('')}</div></div>`;
-  const tr=`<div class="block"><h3>Test results</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a value, or N/A.</p><div class="fields">${tests().map(([k,l])=>tin(k,l)).join('')}</div></div>`;
-  const eicr=`<div class="block"><h3>EICR offered</h3><div class="seg" role="group" aria-label="EICR offered">${['Yes','No','N/A'].map(v=>`<button data-act="eicr" data-a="${v}" aria-pressed="${S.eicr===v}">${v}</button>`).join('')}</div></div>`;
-  if(car)return `<h2>Finalisation and observation report</h2>${obsBlock()}${eicr}${torqueTyres()}${hand}${tr}${disc(DISC_C)}${techLine()}`;
-  return `<h2>Finalisation</h2>${safetyDates()}${tr}${hand}${eicr}${obsBlock()}${disc(DISC_M)}${techLine()}`;
+  const tick=k=>{const h=k.replace(/^h:/,'');const miss=S.showMissing&&!S.tick[k]&&!(h===OLDPARTS&&S.f.hna==='N/A');return `<label class="${miss?'miss':''}"><input type="checkbox" data-tick="${k}" ${S.tick[k]?'checked':''}>${h}${h===OLDPARTS?` <button type="button" class="btn sm" data-act="na" data-a="hna" aria-pressed="${S.f.hna==='N/A'}">N/A</button>`:''}</label>`;};
+  const hand=`<div class="block"><h3>Hand-over checks</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box must be ticked.</p><div class="checks">${HAND.map(h=>tick('h:'+h)).join('')}</div></div>`;
+  const tr=`<div class="block"><h3>Test readings</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a value, or N/A.</p><div class="fields">${tests().map(([k,l])=>tin(k,l)).join('')}</div></div>`;
+  const eicr=`<div class="block ${S.showMissing&&!S.eicr?'miss':''}"><h3>EICR offered</h3><div class="seg" role="group" aria-label="EICR offered">${['Yes','No','N/A'].map(v=>`<button data-act="eicr" data-a="${v}" aria-pressed="${S.eicr===v}">${v}</button>`).join('')}</div></div>`;
+  return `${hdr()}<h2>Finalisation</h2><p class="muted">Sheet 2 of 4: service information, hand-over and test readings.</p>${obsBlock()}${eicr}${car?torqueTyres():''}${hand}${disc(car?DISC_C:DISC_M)}${tr}${techLine()}`;
 }
 function stats(){
   const all=VIEWS.flatMap(v=>S.data[v].pins);
@@ -593,11 +609,11 @@ function sDone(){
 
 /* ---------- Part 2: repair quote ---------- */
 let M='insp',V='home',G=false;
-const RULES={vat:true,vatRate:20,vatBase:'sell',fee:15,callout:75,deduct:false,rate:80,markup:25,partShare:10};
+const RULES={vat:true,vatRate:20,vatBase:'sell',fee:15,callout:75,deduct:false,rate:80,mkThreshold:100,mkHigh:25,mkLow:50,shareMode:'cost10',partShare:10};
 const money=n=>'£'+(Math.round((n+1e-9)*100)/100).toFixed(2);
 const dstr=(off)=>{const d=new Date();d.setDate(d.getDate()+off);return d.toISOString().slice(0,10);};
 const dnice=s=>new Date(s+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-function freshR(){return {step:'req',vis:{req:true},eng:'Tom Mitchell',src:'assessment',ver:1,parts:[],labour:[],status:'Draft',sent:false,accepted:false,paid:false,declined:'',declineText:'',terms:false,signName:'',reqf:{fault:'',pc:'BD1 1AA',paid:false},mode:'same',date:dstr(3),sched:'',proof:{video:false,photos:0},custOK:false,submitted:false,approved:false,backNote:'',reassigned:false,log:[]};}
+function freshR(){return {step:'req',vis:{req:true},eng:'Tom Mitchell',src:'assessment',ver:1,parts:[],labour:[],deliv:[{d:'',c:''}],backText:'',status:'Draft',sent:false,accepted:false,paid:false,declined:'',declineText:'',terms:false,signName:'',reqf:{fault:'',pc:'BD1 1AA',paid:false},mode:'same',date:dstr(3),sched:'',proof:{video:false,photos:0},custOK:false,submitted:false,approved:false,backNote:'',reassigned:false,log:[]};}
 let R=freshR();
 const ST=()=>M==='insp'?S:R;
 const rsteps=()=>[['req','Customer asks'],['build','Engineer quotes'],['quote','Customer accepts'],['plan','Book the repair'],['work','Repair done'],['rev','MCS signs off'],['docs','Paperwork']];
@@ -605,23 +621,27 @@ const ACT={dampnotes:'Engineer',job:'Engineer',details:'Engineer',damp:'Engineer
 const WHO={'Engineer':'Engineer, on an iPad','Customer':'Customer, on the website','MCS admin':'MCS office'};
 const logr=m=>R.log.push(m);
 const qh=l=>Math.round((+l.h||0)*4)/4;
+const mkPct=c=>((+c||0)>=RULES.mkThreshold?RULES.mkHigh:RULES.mkLow);
+const partSell=c=>{c=+c||0;return c*(1+mkPct(c)/100);};
 function calc(){
   const pc=R.parts.reduce((n,p)=>n+(+p.c||0),0);
-  const psell=pc*(1+RULES.markup/100), mk=psell-pc;
+  const psell=R.parts.reduce((n,p)=>n+partSell(p.c),0), mk=psell-pc;
+  const car=R.deliv.reduce((n,d)=>n+(+d.c||0),0);
   const hours=R.labour.reduce((n,l)=>n+qh(l),0), lab=hours*RULES.rate;
-  const base=RULES.vatBase==='sell'?psell:RULES.vatBase==='cost'?pc:psell+lab;
+  const base=RULES.vatBase==='sell'?psell+car:RULES.vatBase==='cost'?pc+car:psell+car+lab;
   const vat=RULES.vat?base*RULES.vatRate/100:0;
-  const total=psell+lab+vat;
+  const total=psell+car+lab+vat;
   const credit=RULES.deduct&&R.src==='assessment'?Math.min(RULES.callout,total):0;
-  const engP=pc*RULES.partShare/100, engL=lab*(1-RULES.fee/100);
-  const supVat=RULES.vat?pc*RULES.vatRate/100:0;
+  const engP=RULES.shareMode==='markup15'?mk*0.15:pc*RULES.partShare/100, engL=lab*(1-RULES.fee/100);
+  const supVat=RULES.vat?(pc+car)*RULES.vatRate/100:0;
   const keeps=psell+lab-pc-engP-engL;
-  return {pc,psell,mk,hours,lab,vat,total,credit,due:total-credit,engP,engL,eng:engP+engL,supVat,keeps};
+  return {pc,psell,mk,car,hours,lab,vat,total,credit,due:total-credit,engP,engL,eng:engP+engL,supVat,keeps};
 }
+const delivRow=()=>{const c=calc();return c.car>0?`<tr><td>${esc(R.deliv[0].d||'Delivery')} <span class="muted">(before VAT)</span></td><td>${money(c.car)}</td></tr>`:'';};
 const tr_=(a,b,cl='')=>`<tr class="${cl}"><td>${a}</td><td>${b}</td></tr>`;
 function sumCustomer(short){
   const c=calc();
-  return `<table class="mt">${short?tr_('Subtotal',money(c.psell+c.lab)):tr_('Parts',money(c.psell))+tr_('Labour ('+c.hours+' h at '+money(RULES.rate)+')',money(c.lab))}${RULES.vat?tr_('VAT ('+RULES.vatRate+'%)',money(c.vat)):''}${tr_('Total',money(c.total),'tot')}${c.credit?tr_('Call-out charge already paid','-'+money(c.credit),'sub')+tr_('To pay now',money(c.due),'tot'):''}</table>`;
+  return `<table class="mt">${short?tr_('Subtotal',money(c.psell+c.car+c.lab)):tr_('Parts',money(c.psell))+(c.car>0?tr_('Delivery (before VAT)',money(c.car)):'')+tr_('Labour ('+c.hours+' h at '+money(RULES.rate)+')',money(c.lab))}${RULES.vat?tr_('VAT ('+RULES.vatRate+'%)',money(c.vat)):''}${tr_('Total',money(c.total),'tot')}${c.credit?tr_('Call-out charge already paid','-'+money(c.credit),'sub')+tr_('To pay now',money(c.due),'tot'):''}</table>`;
 }
 function earnHtml(){
   const c=calc();
@@ -629,11 +649,11 @@ function earnHtml(){
 }
 function moneyFull(){
   const c=calc();
-  const seg=[['Supplier',c.pc+c.supVat,'#8a93a0'],['Engineer',c.eng,'var(--accent)'],['MCS keeps',Math.max(0,c.keeps),'#2f4f9c'],['VAT collected',c.vat,'#d9a21f']];
+  const seg=[['Supplier',c.pc+c.car+c.supVat,'#8a93a0'],['Engineer',c.eng,'var(--accent)'],['MCS keeps',Math.max(0,c.keeps),'#2f4f9c'],['VAT collected',c.vat,'#d9a21f']];
   const tot=seg.reduce((n,s)=>n+s[1],0)||1;
   return `<div class="bar" role="img" aria-label="How the customer payment is split">${seg.map(([l,v,col])=>`<i style="width:${v/tot*100}%;background:${col}"></i>`).join('')}</div>
   <div class="leg">${seg.map(([l,v,col])=>`<span style="--c:${col}">${l} ${money(v)}</span>`).join('')}</div>
-  <table class="mt" style="margin-top:10px">${tr_('Customer pays',money(c.total),'tot')}${tr_('MCS pays the supplier',money(c.pc)+(c.supVat?' + '+money(c.supVat)+' VAT':''))}${tr_('Engineer: '+RULES.partShare+'% of part cost',money(c.engP))}${tr_('Engineer: labour after the '+RULES.fee+'% fee',money(c.engL))}${tr_('Engineer total',money(c.eng),'tot')}${tr_('MCS keeps, before VAT is settled',money(c.keeps),'sub')}</table>`;
+  <table class="mt" style="margin-top:10px">${tr_('Customer pays',money(c.total),'tot')}${tr_('MCS pays the supplier',money(c.pc+c.car)+(c.supVat?' + '+money(c.supVat)+' VAT':''))}${c.car>0?tr_('Of which delivery',money(c.car),'sub'):''}${tr_(RULES.shareMode==='markup15'?'Engineer: 15% of the parts markup':'Engineer: '+RULES.partShare+'% of part cost',money(c.engP))}${tr_('Engineer: labour after the '+RULES.fee+'% fee',money(c.engL))}${tr_('Engineer total',money(c.eng),'tot')}${tr_('MCS keeps, before VAT is settled',money(c.keeps),'sub')}</table>`;
 }
 const rin=(path,label,ph='',type='text')=>{const v=path.split('.').reduce((o,k)=>o[k],R);return `<label class="fld"><span>${label}</span><input data-r="${path}" type="${type}" value="${esc(v??'')}" placeholder="${esc(ph)}"></label>`;};
 function diaryCount(d){const n=new Date(d+'T12:00').getDate();return (n*7)%6;}
@@ -662,9 +682,10 @@ function sBuild(){
     return `${hdr}${note}<div class="cols"><div class="panel"><h3>Quote sent</h3>${sumCustomer()}${R.paid?'':`<div class="cta"><button class="btn" data-act="editq">Edit as version ${R.ver+1}</button></div>`}</div><div>${earnHtml()}</div></div>`;
   }
   return `${hdr}<div class="cols"><div>
-  <div class="panel"><h3>Parts</h3><p class="sub">Type the part and what it cost you before VAT. The platform adds ${RULES.markup}% for the customer price.</p>
+  <div class="panel"><h3>Parts</h3><p class="sub">Type the part and what it cost you before VAT. The platform adds ${RULES.mkHigh}% for the customer price, or ${RULES.mkLow}% when the part costs under ${money(RULES.mkThreshold)}.</p>
   ${R.parts.length?`<div class="th cp"><span>Part</span><span>Your cost</span><span>Receipt</span><span></span></div>${R.parts.map(partRow).join('')}`:'<div class="empty">No parts yet</div>'}
   <button class="btn sm" data-act="padd">Add a part</button></div>
+  <div class="panel"><h3>Delivery of parts</h3><p class="sub">Carriage charged by the supplier. Added before VAT, with no markup.</p>${R.deliv.map((d,i)=>`<div class="tr cp" style="grid-template-columns:minmax(0,1fr) 130px"><input class="inp" aria-label="Delivery description" data-pl="deliv:${i}:d" value="${esc(d.d)}" placeholder="Delivery, e.g. next day carriage"><div class="pre"><span>£</span><input aria-label="Delivery cost before VAT" data-pl="deliv:${i}:c" type="number" min="0" step="0.01" value="${esc(d.c)}" placeholder="0.00"></div></div>`).join('')}</div>
   <div class="panel"><h3>Labour</h3><p class="sub">Hours in quarter hours. MCS sets the rate at ${money(RULES.rate)} an hour.</p>
   ${R.labour.length?`<div class="th cl"><span>Work</span><span>Hours</span><span>Cost</span><span></span></div>${R.labour.map(labRow).join('')}`:'<div class="empty">No labour yet</div>'}
   <div class="cta"><button class="btn sm" data-act="ladd">Add labour</button>${R.src==='inspection'?'<button class="btn sm ghost" data-act="suggest">Add the failed inspection lines</button>':''}</div></div>
@@ -673,7 +694,7 @@ function sBuild(){
 function sQuote(){
   if(!R.sent)return `<div class="pgh"><div><h2>Your quote</h2></div></div><div class="banner">No quote has been sent yet. Go back and send one as the engineer.</div>`;
   if(R.status==='Sent'){R.status='Viewed';logr('Customer opened the quote link');}
-  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d||'Part')}</td><td>${money((+p.c||0)*(1+RULES.markup/100))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d||'Labour')} <span class="muted">(${qh(l)} h)</span></td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('');
+  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d||'Part')}</td><td>${money(partSell(p.c))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d||'Labour')} <span class="muted">(${qh(l)} h)</span></td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('')+delivRow();
   const doc=`<div class="paper"><div class="ph"><div><b>Quote Q-20487-${R.ver}</b><br><span class="muted">Swift Bolero 684 &middot; prepared by ${R.eng}</span></div><div style="text-align:right"><span class="logo">MCS</span><br><span class="muted" style="font-size:12px">Valid until ${dnice(dstr(30))}</span></div></div><table class="mt">${rows}</table><div style="margin-top:10px">${sumCustomer(1)}</div></div>`;
   if(R.paid)return `${doc}<div class="banner ok" style="margin-top:14px">Accepted and paid by ${esc(R.signName)}. Your engineer will agree a date with you.</div>`;
   if(R.declined)return `${doc}<div class="banner bad" style="margin-top:14px">You declined this quote. Your engineer has been told.</div>`;
@@ -710,14 +731,21 @@ function sRev(){
   <div class="panel"><h3>Checks</h3>${ck('Video or photos uploaded',ok)}${ck('Customer confirmed the work is finished',R.custOK)}${ck('Repair is in the diary: '+esc(R.sched||'no'),!!R.sched)}</div></div>
   <div><div class="panel"><h3>Money to release</h3>${moneyFull()}</div>
   ${R.approved?`<div class="banner ok">Signed off. ${money(calc().eng)} is ready in the engineer's job pot. They can now request payment with an invoice, and MCS pays by bank transfer.</div>`
-  :`<button class="btn primary big" data-act="rapprove" style="width:100%" ${ok?'':'disabled'}>Sign off and release</button><div class="cta"><button class="btn" data-act="rback">Send back to the engineer</button></div>${ok?'':'<p class="sub">Needs a video or photos first.</p>'}`}</div></div>`;
+  :`<button class="btn primary big" data-act="rapprove" style="width:100%" ${ok?'':'disabled'}>Sign off and release</button><label class="fld" style="margin-top:10px"><span>If you send it back, say why</span><textarea data-r="backText" rows="3" placeholder="For example: please add a clearer video of the finished repair">${esc(R.backText||'')}</textarea></label><div class="cta"><button class="btn" data-act="rback">Send back to the engineer</button></div>${ok?'':'<p class="sub">Needs a video or photos first.</p>'}`}</div></div>`;
+}
+function mcsEmail(){
+  const c=calc();
+  const rows=R.parts.map(p=>`<tr><td>${esc(p.d||'Part')}</td><td>${money(+p.c||0)} + VAT</td></tr>`).join('')+(c.car>0?`<tr><td>${esc(R.deliv[0].d||'Delivery')}</td><td>${money(c.car)} + VAT</td></tr>`:'');
+  return `<div class="paper"><div class="ph"><div><b>Email to MCS Network</b><br><span class="muted">Sent automatically when the customer pays a quote</span></div>${pill('Draft wording','amber')}</div>
+  <p style="margin:0 0 4px"><b>Subject:</b> Quote Q-20487-${R.ver} paid: order the parts</p><p style="margin:0 0 10px"><b>Job:</b> MCS-20487 &middot; Swift Bolero 684 &middot; Sarah Johnson &middot; ${R.eng}</p>
+  <p>The customer accepted and paid ${money(c.due)}. Please order these parts from the central account:</p><table class="mt">${rows||'<tr><td>No parts on this quote</td><td></td></tr>'}</table><p class="muted" style="margin-top:10px">Total to order: ${money(c.pc+c.car)} before VAT. Repair date: ${esc(R.sched||'not set yet')}.</p></div>`;
 }
 function sDocs(){
   if(!R.paid)return `<div class="pgh"><div><h2>Paperwork</h2></div></div><div class="banner">Nothing yet. Documents appear once the customer has accepted and paid.</div>`;
-  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d)}</td><td>${money((+p.c||0)*(1+RULES.markup/100))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d)} (${qh(l)} h)</td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('');
+  const rows=[...R.parts.map(p=>`<tr><td>${esc(p.d)}</td><td>${money(partSell(p.c))}</td></tr>`),...R.labour.map(l=>`<tr><td>${esc(l.d)} (${qh(l)} h)</td><td>${money(qh(l)*RULES.rate)}</td></tr>`)].join('')+delivRow();
   const dc=(t,s,tag)=>`<div class="paper"><div class="ph"><div><b>${t}</b><br><span class="muted">${s}</span></div>${tag}</div><table class="mt">${rows}</table><div style="margin-top:10px">${sumCustomer(1)}</div></div>`;
   return `<div class="pgh"><div><h2>Paperwork and money</h2></div>${pill(R.status,STAT[R.status]||'grey')}</div>
-  <div class="seg" role="group" aria-label="Document" style="margin-bottom:12px"><button data-act="doc" data-a="invoice" aria-pressed="${R.doc!=='quote'}">Invoice</button><button data-act="doc" data-a="quote" aria-pressed="${R.doc==='quote'}">Quote</button></div>${R.doc==='quote'?dc('Quote Q-20487-'+R.ver,'Kept in the system and sent to the customer',''):dc('Invoice INV-20487-'+R.ver,'Made automatically once paid, same details',pill('PAID','green'))}
+  <div class="seg" role="group" aria-label="Document" style="margin-bottom:12px"><button data-act="doc" data-a="invoice" aria-pressed="${R.doc!=='quote'&&R.doc!=='email'}">Invoice</button><button data-act="doc" data-a="quote" aria-pressed="${R.doc==='quote'}">Quote</button><button data-act="doc" data-a="email" aria-pressed="${R.doc==='email'}">Email to MCS</button></div>${R.doc==='quote'?dc('Quote Q-20487-'+R.ver,'Kept in the system and sent to the customer',''):R.doc==='email'?mcsEmail():dc('Invoice INV-20487-'+R.ver,'Made automatically once paid, same details',pill('PAID','green'))}
   <div class="panel"><h3>Where the customer's payment goes</h3>${moneyFull()}</div>
   <details class="panel"><summary style="cursor:pointer;font-weight:700">What happened</summary><ul class="logl" style="margin-top:8px">${R.log.map(l=>`<li>${esc(l)}</li>`).join('')}</ul></details>
   <div class="cta"><button class="btn" data-act="reset">Restart the demo</button></div>`;
@@ -728,7 +756,7 @@ function sReview(){
   return `<div class="pgh"><div><h2>Inspection to check</h2><p>MCS-20487 &middot; ${veh().name} &middot; ${veh().form}</p></div></div>
   <div class="cols"><div><div class="panel"><h3>Summary</h3>${stats()}</div><div class="panel"><h3>Checks before signing</h3>${ck('Video or photos uploaded',ok)}${ck('Engineer and customer have both signed',!!sig)}<div class="chk"><i class="${fails?'n':'y'}">${fails}</i>failed checklist ${fails===1?'line':'lines'}</div></div></div>
   <div>${S.approved?`<div class="banner ok">Signed by a senior MCS engineer. The signed report was emailed to Sarah Johnson with all three signatures.</div><div class="panel"><h3>What the engineer can do now</h3><ul class="parts"><li>Request payment for the inspection with an invoice</li><li>${fails?`Quote a repair for the ${fails} failed ${fails>1?'lines':'line'}`:'Quote a repair if a fault was found'}</li></ul><button class="btn primary" data-act="toquote">Start the repair quote</button></div>`
-  :`<button class="btn primary big" data-act="iapprove" style="width:100%" ${ready?'':'disabled'}>Sign off the report</button><div class="cta"><button class="btn" data-act="iback">Send back to the engineer</button></div>${ready?'':'<p class="sub">Missing proof or a signature. Go back and complete them, or send it back.</p>'}`}</div></div>`;
+  :`<button class="btn primary big" data-act="iapprove" style="width:100%" ${ready?'':'disabled'}>Sign off the report</button><label class="fld" style="margin-top:10px"><span>If you send it back, say why</span><textarea data-f="backreason" rows="3" placeholder="For example: the video does not show the gas tightness test">${fv('backreason')}</textarea></label><div class="cta"><button class="btn" data-act="iback">Send back to the engineer</button></div>${ready?'':'<p class="sub">Missing proof or a signature. Go back and complete them, or send it back.</p>'}`}</div></div>`;
 }
 function rReady(){
   switch(R.step){
@@ -781,6 +809,13 @@ NOTES.details.i.push(['said','Add the disclaimer and a registration number box (
 NOTES.damp.i.push(['said','A reading entered by mistake must be removable. Headlights and tail lights added. Nearside and offside views turned the right way round. The damp meter chart sits on this page.']);
 NOTES.check.i.push(['said','Every line must be answered, N/A allowed, before the form can be submitted. Electrical, bodywork and fire safety lines follow the list Brian sent. The caravan has its own checklist, taken from the paper.'],['ask','The exact order of every section, checked against clear motorhome paperwork.']);
 NOTES.final.i.push(['ours','Caravan: torque and tyres now sit on this page, as on the paper, so there is no separate Wheels and tyres step. Smoke, CO and extinguisher dates are in Fire safety.'],['said','The disclaimer is on this page. Test result boxes need a value or N/A; the safety dates stay optional.'],['ask','Which boxes exactly are mandatory? The caravan disclaimer says motorhome in the Word file: keep it or change it?']);
+NOTES.job.i.push(['said','Gas safety, electrical and water and damp checks use the same two forms as the habitation check and caravan servicing. The booking offers Habitation check (motorhome) and Caravan servicing as separate choices, and the vehicle decides which form opens.']);
+NOTES.check.i.push(['said','Sheet order: checklist, finalisation, damp report notes, damp survey. Header details are entered once on Vehicle details and shown on every sheet. "No test due to frost" (Yes or No) sits under Toilet.'],['ask','Caravan Chassis says "Breaking system" on the paper; we show "Braking system". OK?']);
+NOTES.final.i.push(['said','Every tick box must be completed. Alarm and extinguisher dates need a date or N/A. Test readings need a value or N/A.'],['ask','Can "Old parts left in vehicle" be N/A? Are the torque and tyre boxes mandatory? The alarm dates now sit on the checklist sheet under Fire safety, as on the paper: is that right?']);
+NOTES.damp.i.push(['said','Rear view: inner square removed and one straight line across the top. The front cab is drawn higher on the side views.']);
+NOTES.review.i.push(['said','When MCS sends a job back it must write why. The engineer sees the note.']);
+NOTES.build.i.push(['said','A delivery line, before VAT. Parts under 100 pounds get 50% markup, parts of 100 pounds or more get 25%, both adjustable.'],['ask','Engineer share on parts: 15% of the markup (14 Oct) or 10% of the part cost (9 Oct)? Does delivery get a markup or an engineer share? We assumed neither. Is the 50% per part line or per quote?']);
+NOTES.docs.i.push(['said','An email goes to MCS when a quote is paid so the parts can be ordered. Ordering parts inside the platform is a later phase.']);
 function chrome(act,A,label){
   const eng=M==='insp'?'Tom Mitchell':R.eng, init=act==='MCS admin'?'MC':eng.split(' ').map(x=>x[0]).join('');
   const navE=['Dashboard','My Jobs','Diary','Earnings','Documents'], navA=['Jobs to check','Payments','Engineers','Customers','Reports'];
@@ -841,7 +876,11 @@ function renderRules(){
   <label>VAT is charged on<select data-rule="vatBase">${o('sell','Parts at the customer price',RULES.vatBase==='sell')}${o('cost','Parts at trade cost only',RULES.vatBase==='cost')}${o('all','Parts and labour',RULES.vatBase==='all')}</select></label>
   <label>MCS fee on labour<select data-rule="fee">${o(15,'15% (first four engineers)',RULES.fee==15)}${o(20,'20% (later engineers)',RULES.fee==20)}</select></label>
   <label>Call-out charge, pounds (amount not given yet)<input data-rule="callout" type="number" min="0" value="${RULES.callout}"></label>
-  <label class="ck"><input type="checkbox" data-rule="deduct" ${RULES.deduct?'checked':''}> Call-out is taken off the repair price</label>`;
+  <label class="ck"><input type="checkbox" data-rule="deduct" ${RULES.deduct?'checked':''}> Call-out is taken off the repair price</label>
+  <label>Part markup when the part costs the dividing line or more (%)<input data-rule="mkHigh" type="number" min="0" value="${RULES.mkHigh}"></label>
+  <label>Part markup when it costs less (%)<input data-rule="mkLow" type="number" min="0" value="${RULES.mkLow}"></label>
+  <label>Dividing line, pounds<input data-rule="mkThreshold" type="number" min="0" value="${RULES.mkThreshold}"></label>
+  <label>Engineer share of parts (Brian gave two versions)<select data-rule="shareMode">${o('cost10','10% of the part cost (9 Oct)',RULES.shareMode==='cost10')}${o('markup15','15% of the markup (14 Oct)',RULES.shareMode==='markup15')}</select></label>`;
 }
 function keep(){ST().keepScroll=true;}
 function go(k){const A=ST();A.step=k;A.vis[k]=true;if(M==='insp'){S.tool=null;S.pending=null;S.selIcon=null;}render();}
@@ -897,7 +936,7 @@ document.addEventListener('click',e=>{
       keep();render();break;}
     case 'sec':S.sec=+a;render();break;
     case 'chk':S.chk[a]=S.chk[a]===b.dataset.b?'':b.dataset.b;keep();render();break;
-    case 'passall':secs()[S.sec].lines.forEach((_,i)=>{const k=secs()[S.sec].id+i;if(!S.chk[k])S.chk[k]='P';});keep();render();break;
+    case 'passall':secs()[S.sec].lines.forEach((l,i)=>{const k=secs()[S.sec].id+i;if(!S.chk[k]&&!isYN(l))S.chk[k]='P';});keep();render();break;
     case 'photo':S.photo[a]=!S.photo[a];keep();render();break;
     case 'vid':S.proof.video=!S.proof.video;keep();render();break;
     case 'ph':S.proof.photos=Math.min(8,S.proof.photos+1);keep();render();break;
@@ -909,7 +948,7 @@ document.addEventListener('click',e=>{
     case 'obsrm':S.obs.splice(+a,1);if(!S.obs.length)S.obs.push({t:'',r:false});keep();render();break;
     case 'rmpin':{const d=S.data[S.view];if(S.pending&&S.pending.idx!=null){d.pins.splice(S.pending.idx,1);S.pending=null;S.last='Reading removed. Tap the drawing for the next point.';}keep();render();break;}
     case 'na':S.f[a]=S.f[a]==='N/A'?'':'N/A';keep();render();break;
-    case 'fix':{const g=grouped()[+a]?.go;if(!g)break;if(g[1]!=null)S.sec=g[1];S.hl=g[0]==='check'?g[2]:'';go(g[0]);setTimeout(()=>{const e=g[0]==='check'?document.querySelector('[data-line="'+g[2]+'"]'):g[0]==='final'?document.querySelector('[data-f="'+g[2]+'"]'):null;if(e)e.scrollIntoView({block:'center'});},30);break;}
+    case 'fix':{const g=grouped()[+a]?.go;if(!g)break;if(g[1]!=null)S.sec=g[1];S.hl=g[0]==='check'?g[2]:'';go(g[0]);setTimeout(()=>{const q=x=>document.querySelector('[data-line="'+x+'"],[data-f="'+x+'"],[data-tick="'+x+'"]');const e=(g[0]==='check'||g[0]==='final')?q(g[2]):null;if(e)e.scrollIntoView({block:'center'});},30);break;}
     case 'start':V='flow';M=a;G=false;if(a==='insp'){S=fresh(S.vehicle);}else{R=freshR();}render();window.scrollTo(0,0);break;
     case 'home':V='home';render();window.scrollTo(0,0);break;
     case 'notes':G=!G;render();break;
@@ -931,7 +970,7 @@ document.addEventListener('click',e=>{
       if(bad){toast('Every line needs a description and a number above zero.');break;}
       R.sent=true;R.declined='';R.status='Sent';logr('Engineer sent quote version '+R.ver+' ('+money(calc().total)+')');keep();render();break;}
     case 'editq':R.ver++;R.sent=false;R.declined='';R.status='Draft';R.terms=false;R.signName='';logr('Engineer started quote version '+R.ver);keep();render();break;
-    case 'accept':if(!R.terms||!R.signName.trim()){toast('Tick the terms and type your name first.');break;}R.accepted=R.paid=true;R.status='Paid';logr('Customer accepted and paid '+money(calc().due));render();break;
+    case 'accept':if(!R.terms||!R.signName.trim()){toast('Tick the terms and type your name first.');break;}R.accepted=R.paid=true;R.status='Paid';logr('Customer accepted and paid '+money(calc().due));logr('Email sent to MCS: quote paid, order the parts');render();toast('Email sent to MCS Network: quote paid, order the parts.');break;
     case 'decline':R.declined=(R.declineText||'').trim()||'No reason given';R.status='Declined';logr('Customer declined: '+R.declined);render();break;
     case 'when':R.mode=a;keep();render();break;
     case 'doc':R.doc=a;keep();render();break;
@@ -944,9 +983,9 @@ document.addEventListener('click',e=>{
     case 'rph':R.proof.photos=Math.min(8,R.proof.photos+1);keep();render();break;
     case 'rsub':if(!(R.proof.video||R.proof.photos>0)){toast('Add a video or photos first.');break;}R.submitted=true;R.backNote='';R.status='Awaiting MCS check';logr('Engineer submitted the repair proof');keep();render();break;
     case 'rapprove':R.approved=true;R.status='Completed';logr('MCS signed off the repair; '+money(calc().eng)+' released to the engineer job pot');keep();render();break;
-    case 'rback':R.submitted=false;R.approved=false;R.backNote='Please add a clearer video of the finished repair.';R.status='Scheduled';logr('MCS sent the repair back to the engineer');go('work');break;
+    case 'rback':{const t=(R.backText||'').trim();if(!t){toast('Write why the job is sent back first.');break;}R.submitted=false;R.approved=false;R.backNote=t;R.backText='';R.status='Scheduled';logr('MCS sent the repair back: '+t);go('work');break;}
     case 'iapprove':S.approved=true;S.backNote='';keep();render();break;
-    case 'iback':S.backNote='the video does not show the gas tightness test.';go('proof');break;
+    case 'iback':{const t=(S.f.backreason||'').trim();if(!t){toast('Write why the job is sent back first.');break;}S.backNote=t;S.f.backreason='';go('proof');break;}
     case 'toquote':M='rep';R.src='inspection';R.vis.build=true;R.step='build';logr('Engineer started a quote from the inspection');render();break;
   }
 });
@@ -959,9 +998,10 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target,k=t.dataset.tick;if(k)S.tick[k]=t.checked;
+  if(t.dataset.svc!==undefined&&t.tagName==='SELECT'){const v=t.value;if(v.startsWith('Habitation')&&S.vehicle!=='motorhome')S=fresh('motorhome');else if(v.startsWith('Caravan')&&S.vehicle!=='caravan')S=fresh('caravan');S.service=v;render();return;}
   if(t.dataset.ob){const [i,fl]=t.dataset.ob.split(':');if(fl==='r')S.obs[+i].r=t.checked;}
   if(t.dataset.r&&['checkbox','date'].includes(t.type)){setPath(R,t.dataset.r,t.type==='checkbox'?t.checked:t.value);keep();render();}
-  if(t.dataset.rule){const r=t.dataset.rule;RULES[r]=t.type==='checkbox'?t.checked:t.tagName==='SELECT'&&r!=='vatBase'?+t.value:t.type==='number'?(+t.value||0):t.value;keep();render();}
+  if(t.dataset.rule){const r=t.dataset.rule;RULES[r]=t.type==='checkbox'?t.checked:t.tagName==='SELECT'&&r!=='vatBase'&&r!=='shareMode'?+t.value:t.type==='number'?(+t.value||0):t.value;keep();render();}
 });
 
 function initSig(){

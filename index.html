@@ -165,6 +165,7 @@ svg.diagram{width:100%;height:auto;display:block;background:var(--surface2);bord
 @media (max-width:640px){.lnrow{grid-template-columns:1fr 1fr}}
 /* ---- walkthrough shell v2 ---- */
 .hdrstrip{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:12.5px;color:var(--muted);padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);margin-bottom:12px}.hdrstrip b{color:var(--fg);font-weight:700;margin-right:4px}
+.tyre input.miss{background:var(--bad-bg)}
 .checks label.miss{background:var(--bad-bg);border-radius:6px}.block.miss{background:var(--bad-bg);border-radius:8px;padding:6px 8px}
 .line.miss,.fld.miss input{background:var(--bad-bg)}.line.miss{border-radius:8px;padding-inline:8px}.line.hl{outline:2px solid var(--accent);border-radius:8px}
 .disc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface2);font-size:12.5px;margin-top:12px}.disc b{display:block;margin-bottom:2px}.disc p{margin:0}
@@ -371,6 +372,10 @@ function problems(){
   if(!S.eicr)p.push({t:'EICR offered: choose Yes, No or N/A',go:['final',null,'eicr']});
   HAND.forEach(h=>{const k='h:'+h;if(!S.tick[k]&&!(h===OLDPARTS&&S.f.hna==='N/A'))p.push({t:'Hand-over: '+h,go:['final',null,k]});});
   tests().forEach(([k,l])=>{if(!String(S.f[k]??'').trim())p.push({t:'Test result: '+l,go:['final',null,k]});});
+  if(S.vehicle==='caravan'){
+    [['torque','Torque setting'],['tsig','Signature'],['tname','Name'],['tsig2','Double check signature (or N/A)'],['tname2','Double check name (or N/A)']].forEach(([k,l])=>{if(!String(S.f[k]??'').trim())p.push({t:'Wheel bolt torque: '+l,go:['final',null,k]});});
+    TYROWS.forEach(([r,l])=>TYCOLS.forEach((c,i)=>{const k='ty'+r+i;if(!String(S.f[k]??'').trim())p.push({t:'Tyres: '+l+' '+c,go:['final',null,k]});}));
+  }
   if(!(S.proof.video||S.proof.photos>0))p.push({t:'Job proof: add a video or photos',go:['proof']});
   if(!S.sig.tech||!S.sig.cust)p.push({t:'Engineer and customer signatures',go:['sign']});
   return p;
@@ -382,6 +387,8 @@ function grouped(){
     if(x.go[0]==='check')add('c'+x.go[1],x,'Checklist, '+secs()[x.go[1]].name);
     else if(x.t.startsWith('Hand-over: '))add('h',x,'Hand-over checks');
     else if(x.t.startsWith('Test result: '))add('t',x,'Test readings');
+    else if(x.t.startsWith('Wheel bolt torque: '))add('w',x,'Wheel bolt torque');
+    else if(x.t.startsWith('Tyres: '))add('y',x,'Tyres');
     else out.push(x);
   });
   return out.map(x=>x.n?{t:x.label+': '+x.n+' not done',go:x.go}:x);
@@ -407,7 +414,7 @@ const VEH={motorhome:{name:'Swift Bolero 684',type:'Motorhome',form:'Motorhome h
 const BANDS=[['green','0 to 15%'],['amber','15 to 20%'],['orange','20 to 30%'],['red','30% and over']];
 
 const NOTES={
- dampnotes:{t:'Damp report notes',did:'The first page of the damp report: what each reading band means, a box for comments and recommendations, and the Please note paragraph.',i:[['said','The first page of the damp report was missing. It is on the original paperwork.'],['ours','Placed after the drawings so the engineer writes comments once the readings are in. The paper has it first.'],['ask','Where in the flow should it sit? Does the report keep the AWS wording? The paper says motorhome on the caravan page too.']]},
+ dampnotes:{t:'Damp report notes',did:'The first page of the damp report: what each reading band means, a box for comments and recommendations, and the Please note paragraph.',i:[['said','The first page of the damp report was missing. It is on the original paperwork.'],['ours','Placed after the drawings so the engineer writes comments once the readings are in. The paper has it first.'],['ask','Does the report keep the AWS wording? The paper says motorhome on the caravan page too.']]},
  job:{t:'Job details',did:'The engineer opens an accepted job and starts the inspection. The job moves to In Progress.',i:[
   ['said','Engineers use the platform on an iPad to go through each customer job.'],
   ['ours','The form is picked from the vehicle type on the booking, so the engineer never chooses a template.'],
@@ -563,12 +570,13 @@ function datesBlock(){return `<div class="block"><h3>Alarm and extinguisher date
 function obsBlock(){
   return `<div class="block"><h3>Service information, additional work and observations</h3>${S.obs.map((o,i)=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 34px;gap:8px;align-items:center;margin-bottom:8px"><input class="inp" aria-label="Observation ${i+1}" data-ob="${i}:t" value="${esc(o.t)}" placeholder="What was found or done"><label class="row" style="gap:6px"><input type="checkbox" data-ob="${i}:r" ${o.r?'checked':''}>Repaired</label><button class="x" aria-label="Remove line" data-act="obsrm" data-a="${i}">${IN}</button></div>`).join('')}${S.obs.length<10?`<button class="btn sm" data-act="obsadd">Add a line (${S.obs.length} of 10)</button>`:'<p class="muted" style="font-size:12px">10 lines, as on the paper form.</p>'}</div>`;
 }
+const TYCOLS=['N/S/F','N/S/R','O/S/F','O/S/R','Spare'];
+const TYROWS=[['age','Tyre age'],['psi','Pressure (PSI or BAR)'],['mm','Tread depth (mm)']];
+const mfld=(k,l,na)=>{const v=String(S.f[k]??'').trim(),isNA=S.f[k]==='N/A';return `<label class="fld ${S.showMissing&&!v?'miss':''}"><span>${l}</span><span class="row"><input data-f="${k}" value="${fv(k)}" ${isNA?'disabled':''} style="flex:1">${na?`<button type="button" class="btn sm" data-act="na" data-a="${k}" aria-pressed="${isNA}">N/A</button>`:''}</span></label>`;};
 function torqueTyres(){
-  const cols=['N/S/F','N/S/R','O/S/F','O/S/R','Spare'];
-  const rows=[['age','Tyre age'],['psi','Pressure (PSI or BAR)'],['mm','Tread depth (mm)']];
-  return `<div class="block"><h3>Wheel bolt torque</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Re-check after 30 miles and before every trip.</p><div class="fields">${inp('torque','Torque setting (Nm)','','number')}${inp('tsig','Signature','')}${inp('tname','Name','')}${inp('tsig2','Double check signature (if possible)','')}${inp('tname2','Name','')}</div></div>
-  <div class="block"><h3>Tyres</h3><div style="overflow-x:auto"><div class="tyre" style="min-width:520px"><span></span>${cols.map(c=>`<b>${c}</b>`).join('')}
-  ${rows.map(([r,l])=>`<b>${l}</b>${cols.map((c,i)=>`<input data-f="ty${r}${i}" value="${fv('ty'+r+i)}" aria-label="${l} ${c}">`).join('')}`).join('')}</div></div>
+  return `<div class="block"><h3>Wheel bolt torque</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Re-check after 30 miles and before every trip. Every box needs a value; the double check can be N/A.</p><div class="fields">${mfld('torque','Torque setting (Nm)')}${mfld('tsig','Signature')}${mfld('tname','Name')}${mfld('tsig2','Double check signature (if possible)',1)}${mfld('tname2','Name',1)}</div></div>
+  <div class="block"><h3>Tyres</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a value. Use Not fitted for a rear wheel or spare the caravan does not have.</p><div style="overflow-x:auto"><div class="tyre" style="min-width:560px"><span></span>${TYCOLS.map((c,i)=>`<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-start"><b>${c}</b><button type="button" class="btn sm" data-act="tyna" data-a="${i}" aria-pressed="${S.f['tyna'+i]==='1'}">Not fitted</button></span>`).join('')}
+  ${TYROWS.map(([r,l])=>`<b>${l}</b>${TYCOLS.map((c,i)=>{const k='ty'+r+i,v=String(S.f[k]??'').trim();return `<input class="${S.showMissing&&!v?'miss':''}" data-f="${k}" value="${fv(k)}" ${S.f[k]==='N/A'?'disabled':''} aria-label="${l} ${c}">`;}).join('')}`).join('')}</div></div>
   <p class="muted" style="font-size:12px;margin:6px 0 0">Recommended replacement if over 5 years old, and never use beyond 7 years old. Rear columns apply to twin-axle tourers.</p></div>`;
 }
 function techLine(){return `<p class="muted" style="font-size:12px">Service technician: Tom Mitchell &middot; ${new Date().toLocaleDateString('en-GB')}. Engineer and customer signatures are taken at Sign-off.</p>`;}
@@ -811,11 +819,12 @@ NOTES.check.i.push(['said','Every line must be answered, N/A allowed, before the
 NOTES.final.i.push(['ours','Caravan: torque and tyres now sit on this page, as on the paper, so there is no separate Wheels and tyres step. Smoke, CO and extinguisher dates are in Fire safety.'],['said','The disclaimer is on this page. Test result boxes need a value or N/A; the safety dates stay optional.'],['ask','Which boxes exactly are mandatory? The caravan disclaimer says motorhome in the Word file: keep it or change it?']);
 NOTES.job.i.push(['said','Gas safety, electrical and water and damp checks use the same two forms as the habitation check and caravan servicing. The booking offers Habitation check (motorhome) and Caravan servicing as separate choices, and the vehicle decides which form opens.']);
 NOTES.check.i.push(['said','Sheet order: checklist, finalisation, damp report notes, damp survey. Header details are entered once on Vehicle details and shown on every sheet. "No test due to frost" (Yes or No) sits under Toilet.'],['ask','Caravan Chassis says "Breaking system" on the paper; we show "Braking system". OK?']);
-NOTES.final.i.push(['said','Every tick box must be completed. Alarm and extinguisher dates need a date or N/A. Test readings need a value or N/A.'],['ask','Can "Old parts left in vehicle" be N/A? Are the torque and tyre boxes mandatory? The alarm dates now sit on the checklist sheet under Fire safety, as on the paper: is that right?']);
+NOTES.final.i.push(['said','Every tick box must be completed. Alarm and extinguisher dates need a date or N/A. Test readings need a value or N/A.'],['ask','Can "Old parts left in vehicle" be N/A?  The alarm dates now sit on the checklist sheet under Fire safety, as on the paper: is that right?']);
 NOTES.damp.i.push(['said','Rear view: inner square removed and one straight line across the top. The front cab is drawn higher on the side views.']);
 NOTES.review.i.push(['said','When MCS sends a job back it must write why. The engineer sees the note.']);
 NOTES.build.i.push(['said','A delivery line, before VAT. Parts under 100 pounds get 50% markup, parts of 100 pounds or more get 25%, both adjustable.'],['ask','Engineer share on parts: 15% of the markup (14 Oct) or 10% of the part cost (9 Oct)? Does delivery get a markup or an engineer share? We assumed neither. Is the 50% per part line or per quote?']);
 NOTES.docs.i.push(['said','An email goes to MCS when a quote is paid so the parts can be ordered. Ordering parts inside the platform is a later phase.']);
+NOTES.final.i.push(['said','Caravan: the torque setting, signature and name, and every tyre box are mandatory (Brian, 15 Oct). The double check can be N/A, and a wheel or spare that is not fitted is marked Not fitted.']);
 function chrome(act,A,label){
   const eng=M==='insp'?'Tom Mitchell':R.eng, init=act==='MCS admin'?'MC':eng.split(' ').map(x=>x[0]).join('');
   const navE=['Dashboard','My Jobs','Diary','Earnings','Documents'], navA=['Jobs to check','Payments','Engineers','Customers','Reports'];
@@ -944,6 +953,7 @@ document.addEventListener('click',e=>{
     case 'clr':delete S.sig[a];render();break;
     case 'reset':restart();break;
     case 'mode':M=a;render();break;
+    case 'tyna':{const i=+a,on=S.f['tyna'+i]!=='1';S.f['tyna'+i]=on?'1':'';TYROWS.forEach(([r])=>{S.f['ty'+r+i]=on?'N/A':'';});keep();render();break;}
     case 'obsadd':S.obs.push({t:'',r:false});keep();render();break;
     case 'obsrm':S.obs.splice(+a,1);if(!S.obs.length)S.obs.push({t:'',r:false});keep();render();break;
     case 'rmpin':{const d=S.data[S.view];if(S.pending&&S.pending.idx!=null){d.pins.splice(S.pending.idx,1);S.pending=null;S.last='Reading removed. Tap the drawing for the next point.';}keep();render();break;}

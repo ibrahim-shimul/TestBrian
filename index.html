@@ -352,7 +352,7 @@ const SEC_C=[
  {id:'fire',name:'Fire safety',lines:['Press test button on smoke alarm to test electrical circuitry and sound alarm (if fitted)','Press test button on CO alarm to test electrical circuitry and sound alarm (if fitted)','If a fire extinguisher is fitted, check security of its housing (see below)','Smoke and/or carbon monoxide alarm(s) if fitted']}
 ];
 const secs=()=>S.vehicle==='caravan'?SEC_C:SEC_M;
-const TESTS=[['bat','Battery rest voltage'],['rcd1','RCD test, 1xΔn'],['rcd5','RCD times, 5xΔn'],['earth','Earth bond, chassis Ω'],['cont','Continuity test, gas Ω'],['chg','Charger voltage'],['hose','Gas hose expiry date'],['reg','Regulator age']];
+const TESTS=[['bat','Battery rest voltage'],['rcd1','RCD test, 1xIΔn'],['rcd5','RCD times, 5xIΔn'],['earth','Earth bond, chassis Ω'],['cont','Continuity test, gas Ω'],['chg','Charger voltage'],['hose','Gas hose expiry date'],['reg','Regulator age']];
 const tests=()=>TESTS;
 const DATES=[['smoke','Smoke alarm expiry date (if visible)'],['co','Carbon monoxide alarm expiry date (if visible)'],['ext','Fire extinguisher expiry date']];
 const OLDPARTS='Old parts left in vehicle (if suitable)';
@@ -564,7 +564,7 @@ function sCheck(){
   <div class="row between"><h2>${sec.name}</h2><button class="btn sm" data-act="passall">Pass all unmarked</button></div>
   ${sec.lines.map((l,i)=>{const k=sec.id+i,v=S.chk[k],yn=isYN(l),lab=yn?l.slice(4):l,opts=yn?[['Y','Yes'],['N','No']]:[['P','P'],['F','F'],['N','N/A'],['R','R']];
     return `<div class="line ${S.showMissing&&!v?'miss':''} ${S.hl===k?'hl':''}" data-line="${k}"><span class="lbl">${lab}</span><span class="pf" role="group" aria-label="${esc(lab)}">${opts.map(([c,t])=>`<button class="${c}" data-act="chk" data-a="${k}" data-b="${c}" aria-pressed="${v===c}">${t}</button>`).join('')}</span>
-    ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}${sec.id==='fire'?datesBlock():''}`;
+    ${v==='F'?`<div class="extra">${inp('n'+k,'Note on this fault','What is wrong?')}<button class="btn sm" data-act="photo" data-a="${k}" style="align-self:flex-end">${S.photo[k]?'1 photo added':'Add photo'}</button></div>`:''}</div>`;}).join('')}${sec.id==='fire'?datesBlock()+disc(DISC_DETAILS):''}`;
 }
 function datesBlock(){return `<div class="block"><h3>Alarm and extinguisher dates</h3><p class="muted" style="font-size:12px;margin:0 0 6px">Every box needs a date, or N/A when it is not visible or not fitted.</p><div class="fields">${DATES.map(([k,l])=>dtin(k,l)).join('')}</div></div>`;}
 function obsBlock(){
@@ -825,6 +825,8 @@ NOTES.review.i.push(['said','When MCS sends a job back it must write why. The en
 NOTES.build.i.push(['said','A delivery line, before VAT. Parts under 100 pounds get 50% markup, parts of 100 pounds or more get 25%, both adjustable.'],['ask','Engineer share on parts: 15% of the markup (14 Oct) or 10% of the part cost (9 Oct)? Does delivery get a markup or an engineer share? We assumed neither. Is the 50% per part line or per quote?']);
 NOTES.docs.i.push(['said','An email goes to MCS when a quote is paid so the parts can be ordered. Ordering parts inside the platform is a later phase.']);
 NOTES.final.i.push(['said','Caravan: the torque setting, signature and name, and every tyre box are mandatory (Brian, 15 Oct). The double check can be N/A, and a wheel or spare that is not fitted is marked Not fitted.']);
+NOTES.check.i.push(['said','The Fire safety section ends with the disclaimer: All appliances are tested for operation only (Brian, 16 Oct).']);
+NOTES.final.i.push(['said','The two test boxes read RCD test, 1xIΔn and RCD times, 5xIΔn (Brian, 16 Oct).']);
 function chrome(act,A,label){
   const eng=M==='insp'?'Tom Mitchell':R.eng, init=act==='MCS admin'?'MC':eng.split(' ').map(x=>x[0]).join('');
   const navE=['Dashboard','My Jobs','Diary','Earnings','Documents'], navA=['Jobs to check','Payments','Engineers','Customers','Reports'];
